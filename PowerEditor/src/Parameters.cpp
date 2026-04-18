@@ -6196,7 +6196,8 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		{
 			{
 				using enum NppGUI::AutocStatus;
-				_nppGUI._autocStatus = getRangeDefaultAttribute(childNode, "autoCAction", autoc_none, autoc_both, _nppGUI._autocStatus);
+				(void)getRangeDefaultAttribute(childNode, "autoCAction", autoc_none, autoc_both, _nppGUI._autocStatus);
+				_nppGUI._autocStatus = autoc_both; // RE2: always on (word + function completion)
 			}
 
 			// from preferenceDlg.cpp
