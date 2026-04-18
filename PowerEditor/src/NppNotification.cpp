@@ -74,6 +74,14 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 				_pEditView->getCurrentBuffer()->setModifiedStatus(true);
 			}
 
+			// RE2: paint persistent "touch" marker on user-driven insertions (for cross-session history)
+			if ((notification->modificationType & SC_MOD_INSERTTEXT)
+				&& (notification->modificationType & (SC_PERFORMED_USER | SC_PERFORMED_REDO))
+				&& notification->length > 0)
+			{
+				re2TrackEditMark(notification->position, notification->length);
+			}
+
 			if (notification->modificationType & SC_MOD_CHANGEINDICATOR)
 			{
 				::InvalidateRect(notifyView->getHSelf(), NULL, FALSE);
@@ -134,6 +142,12 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 				isDirty = true;
 
 			buf->setDirty(isDirty);
+
+			// RE2: on save-point reached (file saved), persist marks to sidecar
+			if (notification->nmhdr.code == SCN_SAVEPOINTREACHED && !isDirty)
+			{
+				re2SaveMarksForCurrentBuffer();
+			}
 			break;
 		}
 

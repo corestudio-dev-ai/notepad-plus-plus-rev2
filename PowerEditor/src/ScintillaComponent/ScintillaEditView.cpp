@@ -3351,6 +3351,14 @@ void ScintillaEditView::performGlobalStyles()
 	execute(SCI_MARKERSETFORE, SC_MARKNUM_HISTORY_SAVED, re2CommittedGreen);
 	execute(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_SAVED, re2CommittedGreen);
 
+	// RE2: persistent "history touch" indicator (slot 22) - survives restart via sidecar
+	constexpr int RE2_INDIC_HISTORY_TOUCH = 22;
+	execute(SCI_INDICSETSTYLE, RE2_INDIC_HISTORY_TOUCH, INDIC_ROUNDBOX);
+	execute(SCI_INDICSETFORE,  RE2_INDIC_HISTORY_TOUCH, re2CommittedGreen);
+	execute(SCI_INDICSETALPHA, RE2_INDIC_HISTORY_TOUCH, 40);
+	execute(SCI_INDICSETOUTLINEALPHA, RE2_INDIC_HISTORY_TOUCH, 120);
+	execute(SCI_INDICSETUNDER, RE2_INDIC_HISTORY_TOUCH, true);
+
 	COLORREF urlHoveredFG = grey;
 	pStyle = stylers.findByName(L"URL hovered");
 	if (pStyle)

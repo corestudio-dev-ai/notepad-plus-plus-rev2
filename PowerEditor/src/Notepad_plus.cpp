@@ -21,8 +21,11 @@
 #include <windowsx.h>
 
 #include <ctime>
+#include <cstdint>
 #include <map>
 #include <memory>
+#include <set>
+#include <vector>
 
 #include "NppXml.h"
 #include "Notepad_plus_Window.h"
@@ -6822,6 +6825,9 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 	Buffer * buf = MainFileManager.getBufferByID(bufid);
 	buf->increaseRecentTag();
 
+	// RE2: restore persistent marks once per buffer
+	re2LoadMarksForBuffer(bufid, view);
+
 	if (view == MAIN_VIEW)
 	{
 		_autoCompleteMain.setLanguage(buf->getLangType());
@@ -9347,10 +9353,26 @@ namespace {
 	void getButtonRects(HWND hwnd, RECT& rAccept, RECT& rReject) {
 		RECT rc; ::GetClientRect(hwnd, &rc);
 		int cx = (rc.right + rc.left) / 2;
-		int btnW = 140, btnH = 26, gap = 12;
+		int btnW = 260, btnH = 56, gap = 22;
 		int y = (rc.bottom - btnH) / 2;
 		rAccept = { cx - btnW - gap / 2, y, cx - gap / 2, y + btnH };
 		rReject = { cx + gap / 2, y, cx + btnW + gap / 2, y + btnH };
+	}
+	HFONT& re2LabelFont() { static HFONT f = nullptr; return f; }
+	HFONT& re2GlyphFont() { static HFONT f = nullptr; return f; }
+	void ensureRe2Fonts() {
+		if (!re2LabelFont()) {
+			LOGFONTW lf{}; lf.lfHeight = -18; lf.lfWeight = FW_SEMIBOLD;
+			lf.lfCharSet = DEFAULT_CHARSET; lf.lfQuality = CLEARTYPE_QUALITY;
+			wcscpy_s(lf.lfFaceName, L"Segoe UI");
+			re2LabelFont() = ::CreateFontIndirectW(&lf);
+		}
+		if (!re2GlyphFont()) {
+			LOGFONTW lf{}; lf.lfHeight = -22; lf.lfWeight = FW_BOLD;
+			lf.lfCharSet = DEFAULT_CHARSET; lf.lfQuality = CLEARTYPE_QUALITY;
+			wcscpy_s(lf.lfFaceName, L"Segoe UI Symbol");
+			re2GlyphFont() = ::CreateFontIndirectW(&lf);
+		}
 	}
 	bool currentBufferDirty(Notepad_plus_Window* win) {
 		if (!win) return false;
@@ -9386,6 +9408,7 @@ LRESULT Notepad_plus::re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
 		case WM_PAINT:
 		{
+			ensureRe2Fonts();
 			PAINTSTRUCT ps;
 			HDC hdcWin = ::BeginPaint(hwnd, &ps);
 			RECT rc; ::GetClientRect(hwnd, &rc);
@@ -9394,13 +9417,16 @@ LRESULT Notepad_plus::re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 			HBITMAP bmp = ::CreateCompatibleBitmap(hdcWin, rc.right, rc.bottom);
 			HGDIOBJ oldBmp = ::SelectObject(hdc, bmp);
 
-			// Background — RE2 Abyss rail color
-			HBRUSH bg = ::CreateSolidBrush(RGB(0x07, 0x15, 0x24));
-			::FillRect(hdc, &rc, bg);
-			::DeleteObject(bg);
+			// Background — vertical gradient from #0B1E32 (top) to #050E1A (bottom)
+			TRIVERTEX v[2] = {
+				{ rc.left,  rc.top,    0x0B00, 0x1E00, 0x3200, 0xFF00 },
+				{ rc.right, rc.bottom, 0x0500, 0x0E00, 0x1A00, 0xFF00 }
+			};
+			GRADIENT_RECT gr = { 0, 1 };
+			::GradientFill(hdc, v, 2, &gr, 1, GRADIENT_FILL_RECT_V);
 
-			// Top separator line
-			HPEN pen = ::CreatePen(PS_SOLID, 1, RGB(0x18, 0x38, 0x5F));
+			// Top accent line (subtle blue)
+			HPEN pen = ::CreatePen(PS_SOLID, 1, RGB(0x1E, 0x44, 0x75));
 			HGDIOBJ oldPen = ::SelectObject(hdc, pen);
 			::MoveToEx(hdc, rc.left, rc.top, nullptr);
 			::LineTo(hdc, rc.right, rc.top);
@@ -9409,34 +9435,67 @@ LRESULT Notepad_plus::re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
 			RECT rA, rR; getButtonRects(hwnd, rA, rR);
 
-			auto drawBtn = [&](RECT r, bool hover, bool pressed, COLORREF border, COLORREF fill, COLORREF fillHover, const wchar_t* label) {
-				HBRUSH b = ::CreateSolidBrush(pressed ? border : (hover ? fillHover : fill));
-				::FillRect(hdc, &r, b);
-				::DeleteObject(b);
-				HPEN bp = ::CreatePen(PS_SOLID, 1, border);
+			auto drawRoundBtn = [&](RECT r, bool hover, bool pressed,
+				COLORREF border, COLORREF fillTop, COLORREF fillBot, COLORREF hoverTop, COLORREF hoverBot,
+				const wchar_t* glyph, const wchar_t* label) {
+
+				int radius = 14;
+				// Vertical gradient fill inside rounded rect (draw rect, then rounded stroke)
+				HRGN clipRgn = ::CreateRoundRectRgn(r.left, r.top, r.right + 1, r.bottom + 1, radius, radius);
+				::SelectClipRgn(hdc, clipRgn);
+
+				COLORREF ct = hover ? hoverTop : fillTop;
+				COLORREF cb = hover ? hoverBot : fillBot;
+				if (pressed) { ct = fillBot; cb = fillTop; } // invert on press
+				TRIVERTEX bv[2] = {
+					{ r.left,  r.top,    (COLOR16)(GetRValue(ct) << 8), (COLOR16)(GetGValue(ct) << 8), (COLOR16)(GetBValue(ct) << 8), 0xFF00 },
+					{ r.right, r.bottom, (COLOR16)(GetRValue(cb) << 8), (COLOR16)(GetGValue(cb) << 8), (COLOR16)(GetBValue(cb) << 8), 0xFF00 }
+				};
+				GRADIENT_RECT bg = { 0, 1 };
+				::GradientFill(hdc, bv, 2, &bg, 1, GRADIENT_FILL_RECT_V);
+				::SelectClipRgn(hdc, nullptr);
+				::DeleteObject(clipRgn);
+
+				// Rounded border
+				HPEN bp = ::CreatePen(PS_SOLID, hover ? 2 : 1, border);
 				HGDIOBJ oldBp = ::SelectObject(hdc, bp);
 				HGDIOBJ oldBr = ::SelectObject(hdc, ::GetStockObject(NULL_BRUSH));
-				::Rectangle(hdc, r.left, r.top, r.right, r.bottom);
+				::RoundRect(hdc, r.left, r.top, r.right, r.bottom, radius, radius);
 				::SelectObject(hdc, oldBp);
 				::SelectObject(hdc, oldBr);
 				::DeleteObject(bp);
 
-				HFONT font = (HFONT)::GetStockObject(DEFAULT_GUI_FONT);
-				HGDIOBJ oldF = ::SelectObject(hdc, font);
 				::SetBkMode(hdc, TRANSPARENT);
-				::SetTextColor(hdc, pressed ? RGB(0x07, 0x15, 0x24) : RGB(0xE6, 0xEE, 0xF8));
-				::DrawTextW(hdc, label, -1, &r, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+				::SetTextColor(hdc, RGB(0xF4, 0xF8, 0xFD));
+
+				// Glyph on the left
+				RECT rg = r; rg.left += 20; rg.right = rg.left + 34;
+				HGDIOBJ oldF = ::SelectObject(hdc, re2GlyphFont());
+				::SetTextColor(hdc, border); // accent-colored glyph
+				::DrawTextW(hdc, glyph, -1, &rg, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+				::SelectObject(hdc, oldF);
+
+				// Label
+				RECT rl = r; rl.left += 58; rl.right -= 14;
+				oldF = ::SelectObject(hdc, re2LabelFont());
+				::SetTextColor(hdc, RGB(0xF4, 0xF8, 0xFD));
+				::DrawTextW(hdc, label, -1, &rl, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 				::SelectObject(hdc, oldF);
 			};
 
-			// Accept (green)
-			drawBtn(rA, st.hoverAccept, st.pressedAccept,
-				RGB(0x50, 0xDC, 0x64), RGB(0x08, 0x30, 0x1F), RGB(0x10, 0x50, 0x30),
-				L"\u2713  Accept Changes");
-			// Reject (red)
-			drawBtn(rR, st.hoverReject, st.pressedReject,
-				RGB(0xFF, 0x40, 0x40), RGB(0x30, 0x08, 0x08), RGB(0x50, 0x10, 0x10),
-				L"\u2717  Reject Changes");
+			// Accept (green) — border/accent #50DC64, fill #0E2A1C → #0A1F15
+			drawRoundBtn(rA, st.hoverAccept, st.pressedAccept,
+				RGB(0x50, 0xDC, 0x64),
+				RGB(0x0E, 0x2A, 0x1C), RGB(0x08, 0x1C, 0x12),
+				RGB(0x18, 0x44, 0x2B), RGB(0x10, 0x30, 0x1E),
+				L"\u2714", L"Accept Changes  (Commit to disk)");
+
+			// Reject (red) — border/accent #FF6464, fill #2A0E14 → #1C080C
+			drawRoundBtn(rR, st.hoverReject, st.pressedReject,
+				RGB(0xFF, 0x64, 0x64),
+				RGB(0x2A, 0x0E, 0x14), RGB(0x1C, 0x08, 0x0C),
+				RGB(0x44, 0x18, 0x20), RGB(0x30, 0x10, 0x18),
+				L"\u2716", L"Reject Changes  (Revert to disk)");
 
 			::BitBlt(hdcWin, 0, 0, rc.right, rc.bottom, hdc, 0, 0, SRCCOPY);
 			::SelectObject(hdc, oldBmp);
@@ -9518,4 +9577,128 @@ void Notepad_plus::re2RepaintCommitBar()
 {
 	if (_re2CommitBar)
 		::InvalidateRect(_re2CommitBar, nullptr, FALSE);
+}
+
+// ===== RE2: sidecar persistence for change marks (slot 22) =====
+namespace {
+	constexpr int RE2_INDIC_HISTORY_TOUCH = 22;
+
+	std::wstring re2HashFileKey(const std::wstring& path) {
+		// Simple FNV-1a 64-bit hash of lowercased path
+		uint64_t h = 0xcbf29ce484222325ULL;
+		for (wchar_t c : path) {
+			wchar_t lc = (c >= L'A' && c <= L'Z') ? (wchar_t)(c + 32) : c;
+			h ^= (uint64_t)lc;
+			h *= 0x100000001b3ULL;
+		}
+		wchar_t buf[32];
+		swprintf(buf, 32, L"%016llx", (unsigned long long)h);
+		return std::wstring(buf);
+	}
+
+	std::wstring re2MarksDir() {
+		std::wstring dir = NppParameters::getInstance().getUserPath();
+		pathAppend(dir, L"re2_marks");
+		::CreateDirectoryW(dir.c_str(), nullptr);
+		return dir;
+	}
+
+	std::wstring re2MarksPathFor(const std::wstring& filepath) {
+		std::wstring out = re2MarksDir();
+		pathAppend(out, re2HashFileKey(filepath) + L".marks");
+		return out;
+	}
+
+	std::set<BufferID>& re2LoadedMarkBuffers() {
+		static std::set<BufferID> s;
+		return s;
+	}
+}
+
+void Notepad_plus::re2TrackEditMark(intptr_t position, intptr_t length)
+{
+	// Paint persistent touch indicator on current edit view for the changed range
+	if (length <= 0) return;
+	ScintillaEditView* view = _pEditView;
+	if (!view) return;
+	view->execute(SCI_SETINDICATORCURRENT, RE2_INDIC_HISTORY_TOUCH);
+	view->execute(SCI_INDICATORFILLRANGE, position, length);
+}
+
+void Notepad_plus::re2SaveMarksForCurrentBuffer()
+{
+	ScintillaEditView* view = _pEditView;
+	if (!view) return;
+	Buffer* buf = view->getCurrentBuffer();
+	if (!buf || buf->isUntitled()) return;
+	std::wstring path = buf->getFullPathName();
+	if (path.empty()) return;
+
+	// Walk slot 22 to collect filled ranges
+	std::vector<std::pair<intptr_t, intptr_t>> ranges;
+	intptr_t docEnd = view->execute(SCI_GETLENGTH);
+	view->execute(SCI_SETINDICATORCURRENT, RE2_INDIC_HISTORY_TOUCH);
+	intptr_t pos = 0;
+	while (pos < docEnd) {
+		intptr_t val = view->execute(SCI_INDICATORVALUEAT, RE2_INDIC_HISTORY_TOUCH, pos);
+		if (val) {
+			intptr_t end = view->execute(SCI_INDICATOREND, RE2_INDIC_HISTORY_TOUCH, pos);
+			if (end <= pos) break;
+			ranges.emplace_back(pos, end);
+			pos = end;
+		} else {
+			intptr_t next = view->execute(SCI_INDICATOREND, RE2_INDIC_HISTORY_TOUCH, pos);
+			if (next <= pos) break;
+			pos = next;
+		}
+	}
+
+	std::wstring sidecar = re2MarksPathFor(path);
+	HANDLE h = ::CreateFileW(sidecar.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_HIDDEN, nullptr);
+	if (h == INVALID_HANDLE_VALUE) return;
+	uint32_t magic = 0x5245324D; // 'RE2M'
+	uint32_t count = (uint32_t)ranges.size();
+	DWORD wr = 0;
+	::WriteFile(h, &magic, sizeof(magic), &wr, nullptr);
+	::WriteFile(h, &count, sizeof(count), &wr, nullptr);
+	for (auto& r : ranges) {
+		uint64_t s = (uint64_t)r.first, e = (uint64_t)r.second;
+		::WriteFile(h, &s, sizeof(s), &wr, nullptr);
+		::WriteFile(h, &e, sizeof(e), &wr, nullptr);
+	}
+	::CloseHandle(h);
+}
+
+void Notepad_plus::re2LoadMarksForBuffer(BufferID id, int view)
+{
+	auto& loaded = re2LoadedMarkBuffers();
+	if (loaded.count(id)) return;
+	loaded.insert(id);
+
+	Buffer* buf = MainFileManager.getBufferByID(id);
+	if (!buf || buf->isUntitled()) return;
+	std::wstring path = buf->getFullPathName();
+	if (path.empty()) return;
+
+	std::wstring sidecar = re2MarksPathFor(path);
+	HANDLE h = ::CreateFileW(sidecar.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (h == INVALID_HANDLE_VALUE) return;
+	uint32_t magic = 0, count = 0;
+	DWORD rd = 0;
+	::ReadFile(h, &magic, sizeof(magic), &rd, nullptr);
+	::ReadFile(h, &count, sizeof(count), &rd, nullptr);
+	if (magic != 0x5245324D || count > 100000) { ::CloseHandle(h); return; }
+
+	ScintillaEditView* editView = (view == MAIN_VIEW) ? &_mainEditView : &_subEditView;
+	intptr_t docLen = editView->execute(SCI_GETLENGTH);
+	editView->execute(SCI_SETINDICATORCURRENT, RE2_INDIC_HISTORY_TOUCH);
+	for (uint32_t i = 0; i < count; ++i) {
+		uint64_t s = 0, e = 0;
+		::ReadFile(h, &s, sizeof(s), &rd, nullptr);
+		::ReadFile(h, &e, sizeof(e), &rd, nullptr);
+		if (e > (uint64_t)docLen) e = (uint64_t)docLen;
+		if (s < e)
+			editView->execute(SCI_INDICATORFILLRANGE, (intptr_t)s, (intptr_t)(e - s));
+	}
+	::CloseHandle(h);
 }
