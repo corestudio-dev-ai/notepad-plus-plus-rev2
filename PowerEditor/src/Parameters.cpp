@@ -1521,8 +1521,15 @@ bool NppParameters::load()
 		::CopyFile(srcStylersPath.c_str(), _stylerPath.c_str(), TRUE);
 	}
 
-	if (_nppGUI._themeName.empty() || (!doesFileExist(_nppGUI._themeName.c_str())))
-		_nppGUI._themeName.assign(_stylerPath);
+	// RE2: force Abyss-RE2 as the only theme
+	{
+		std::wstring abyssPath(_nppPath);
+		pathAppend(abyssPath, L"themes\\Abyss-RE2.xml");
+		if (doesFileExist(abyssPath.c_str()))
+			_nppGUI._themeName.assign(abyssPath);
+		else
+			_nppGUI._themeName.assign(_stylerPath);
+	}
 
 	_pXmlUserStylerDoc._path = _nppGUI._themeName;
 	_pXmlUserStylerDoc._doc = new NppXml::NewDocument();
