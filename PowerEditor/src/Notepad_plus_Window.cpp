@@ -440,6 +440,31 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 
 	if (nppParams.doPrintAndExit())
 		::SendMessage(_hSelf, NPPM_INTERNAL_PRNTANDQUIT, 0, 0);
+
+	// RE2: first-run onboarding — show welcome once, gated by a marker file in the user config dir
+	{
+		std::wstring markerPath = nppParams.getUserPath();
+		pathAppend(markerPath, L"re2_onboarded.marker");
+		if (!doesFileExist(markerPath.c_str()))
+		{
+			const wchar_t* welcomeMsg =
+				L"Welcome to Notepad++ RE2\n"
+				L"\n"
+				L"A modern, dark-only take on Notepad++.\n"
+				L"\n"
+				L"\u2022 Theme: Abyss-RE2 (dark navy, Cascadia Code)\n"
+				L"\u2022 Dark mode is always on\n"
+				L"\u2022 HTML/XML tags auto-close as you type\n"
+				L"\u2022 Animated chromatic caret\n"
+				L"\u2022 Style Configurator moved to File \u2192 Settings\n"
+				L"\n"
+				L"Happy editing.";
+			::MessageBoxW(_hSelf, welcomeMsg, L"Notepad++ RE2", MB_OK | MB_ICONINFORMATION);
+			HANDLE h = ::CreateFileW(markerPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+			if (h != INVALID_HANDLE_VALUE)
+				::CloseHandle(h);
+		}
+	}
 }
 
 
