@@ -16,7 +16,11 @@
 
 
 #include <shlwapi.h>
+#include <commctrl.h>
+#include <shobjidl.h>
+#include <fstream>
 #include "Notepad_plus_Window.h"
+#include "menuCmdID.h"
 
 HWND Notepad_plus_Window::gNppHWND = NULL;
 
@@ -60,6 +64,111 @@ void Notepad_plus_Window::setStartupBgColor(COLORREF BgColor)
 	ReleaseDC(_hSelf, hdc);
 }
 
+
+// RE2 Start Center: TaskDialog-based launcher with "blank / blank HTML / web project" command links.
+void Notepad_plus_Window::showStartCenterRE2()
+{
+	TASKDIALOG_BUTTON buttons[] = {
+		{ 1001, L"Blank document\nStart with an empty file." },
+		{ 1002, L"Blank HTML file\nNew file pre-filled with HTML5 boilerplate." },
+		{ 1003, L"New web project\nCreates index.html, style.css, script.js in a folder you pick." },
+	};
+
+	TASKDIALOGCONFIG tdc = {};
+	tdc.cbSize = sizeof(tdc);
+	tdc.hwndParent = _hSelf;
+	tdc.hInstance = _hInst;
+	tdc.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_USE_COMMAND_LINKS;
+	tdc.pszWindowTitle = L"Notepad++ RE2";
+	tdc.pszMainIcon = TD_INFORMATION_ICON;
+	tdc.pszMainInstruction = L"Welcome. What would you like to start with?";
+	tdc.pszContent = L"Pick a starting point, or Cancel to keep the empty document.";
+	tdc.cButtons = _countof(buttons);
+	tdc.pButtons = buttons;
+	tdc.nDefaultButton = 1001;
+
+	int selected = 0;
+	if (SUCCEEDED(TaskDialogIndirect(&tdc, &selected, nullptr, nullptr)))
+	{
+		switch (selected)
+		{
+			case 1002: createBlankHtmlRE2(); break;
+			case 1003: createWebProjectRE2(); break;
+			default: break;
+		}
+	}
+}
+
+void Notepad_plus_Window::createBlankHtmlRE2()
+{
+	_notepad_plus_plus_core.fileNew();
+	::SendMessage(_hSelf, WM_COMMAND, IDM_LANG_HTML, 0);
+	static constexpr const char* html =
+		"<!DOCTYPE html>\r\n"
+		"<html lang=\"en\">\r\n"
+		"<head>\r\n"
+		"\t<meta charset=\"UTF-8\">\r\n"
+		"\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"
+		"\t<title>New Page</title>\r\n"
+		"</head>\r\n"
+		"<body>\r\n"
+		"\t\r\n"
+		"</body>\r\n"
+		"</html>\r\n";
+	_notepad_plus_plus_core._pEditView->execute(SCI_SETTEXT, 0, reinterpret_cast<LPARAM>(html));
+}
+
+void Notepad_plus_Window::createWebProjectRE2()
+{
+	IFileDialog* pfd = nullptr;
+	if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&pfd))))
+		return;
+
+	DWORD flags = 0;
+	pfd->GetOptions(&flags);
+	pfd->SetOptions(flags | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+	pfd->SetTitle(L"Choose a folder for your new web project");
+
+	if (pfd->Show(_hSelf) != S_OK) { pfd->Release(); return; }
+
+	IShellItem* item = nullptr;
+	if (FAILED(pfd->GetResult(&item))) { pfd->Release(); return; }
+
+	PWSTR folderPath = nullptr;
+	if (FAILED(item->GetDisplayName(SIGDN_FILESYSPATH, &folderPath)))
+	{
+		item->Release(); pfd->Release(); return;
+	}
+
+	auto writeFile = [](const std::wstring& path, const std::string& content) {
+		std::ofstream out(path, std::ios::binary);
+		if (out) out.write(content.data(), content.size());
+	};
+
+	std::wstring base(folderPath);
+	writeFile(base + L"\\index.html",
+		"<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head>\r\n"
+		"\t<meta charset=\"UTF-8\">\r\n\t<title>New Project</title>\r\n"
+		"\t<link rel=\"stylesheet\" href=\"style.css\">\r\n</head>\r\n<body>\r\n"
+		"\t<h1>Hello, world.</h1>\r\n\t<script src=\"script.js\"></script>\r\n"
+		"</body>\r\n</html>\r\n");
+	writeFile(base + L"\\style.css",
+		"body {\r\n\tfont-family: 'Cascadia Code', monospace;\r\n"
+		"\tbackground: #000C18;\r\n\tcolor: #6688CC;\r\n"
+		"\tmargin: 2rem;\r\n}\r\n");
+	writeFile(base + L"\\script.js",
+		"document.addEventListener('DOMContentLoaded', () => {\r\n"
+		"\tconsole.log('RE2 web project ready');\r\n});\r\n");
+
+	std::wstring indexPath = base + L"\\index.html";
+	BufferID bid = _notepad_plus_plus_core.doOpen(indexPath);
+	if (bid != BUFFER_INVALID)
+		_notepad_plus_plus_core.switchToFile(bid);
+
+	CoTaskMemFree(folderPath);
+	item->Release();
+	pfd->Release();
+}
 
 void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdLine, CmdLineParams *cmdLineParams)
 {
@@ -447,19 +556,7 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 		pathAppend(markerPath, L"re2_onboarded.marker");
 		if (!doesFileExist(markerPath.c_str()))
 		{
-			const wchar_t* welcomeMsg =
-				L"Welcome to Notepad++ RE2\n"
-				L"\n"
-				L"A modern, dark-only take on Notepad++.\n"
-				L"\n"
-				L"\u2022 Theme: Abyss-RE2 (dark navy, Cascadia Code)\n"
-				L"\u2022 Dark mode is always on\n"
-				L"\u2022 HTML/XML tags auto-close as you type\n"
-				L"\u2022 Animated chromatic caret\n"
-				L"\u2022 Style Configurator moved to File \u2192 Settings\n"
-				L"\n"
-				L"Happy editing.";
-			::MessageBoxW(_hSelf, welcomeMsg, L"Notepad++ RE2", MB_OK | MB_ICONINFORMATION);
+			showStartCenterRE2();
 			HANDLE h = ::CreateFileW(markerPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 			if (h != INVALID_HANDLE_VALUE)
 				::CloseHandle(h);

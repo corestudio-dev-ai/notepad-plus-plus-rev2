@@ -73,6 +73,11 @@ private:
 	static LRESULT CALLBACK Notepad_plus_Proc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 	LRESULT runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
+	// RE2 start center
+	void showStartCenterRE2();
+	void createBlankHtmlRE2();
+	void createWebProjectRE2();
+
 	static constexpr wchar_t _className[32] = L"Notepad++ RE2";
 	bool _isPrelaunch = false;
 	bool _disablePluginsManager = false;

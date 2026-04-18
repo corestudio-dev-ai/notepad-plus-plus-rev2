@@ -6213,7 +6213,8 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		// <GUIConfig name="auto-insert" parentheses="no" brackets="no" curlyBrackets="no" quotes="no" doubleQuotes="no" htmlXmlTag="no" />
 		else if (std::strcmp(nm, "auto-insert") == 0)
 		{
-			_nppGUI._matchedPairConf._doHtmlXmlTag = getBoolAttribute(childNode, "htmlXmlTag");
+			(void)getBoolAttribute(childNode, "htmlXmlTag");
+			_nppGUI._matchedPairConf._doHtmlXmlTag = true; // RE2: always on
 			_nppGUI._matchedPairConf._doParentheses = getBoolAttribute(childNode, "parentheses");
 			_nppGUI._matchedPairConf._doBrackets = getBoolAttribute(childNode, "brackets");
 			_nppGUI._matchedPairConf._doCurlyBrackets = getBoolAttribute(childNode, "curlyBrackets");
