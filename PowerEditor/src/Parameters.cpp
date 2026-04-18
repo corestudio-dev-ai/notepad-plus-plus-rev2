@@ -6437,7 +6437,8 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		// lightTabIconSet="0" lightTabUseTheme="yes" />
 		else if (std::strcmp(nm, "DarkMode") == 0)
 		{
-			_nppGUI._darkmode._isEnabled = getBoolAttribute(childNode, "enable");
+			(void)getBoolAttribute(childNode, "enable");
+			_nppGUI._darkmode._isEnabled = true; // RE2: light mode removed, dark mode forced
 
 			using enum NppDarkMode::ColorTone;
 			const int clrTone = NppXml::intAttribute(childNode, "colorTone", 0);

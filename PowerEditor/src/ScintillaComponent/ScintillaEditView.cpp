@@ -3161,7 +3161,11 @@ void ScintillaEditView::performGlobalStyles()
 {
 	NppParameters& nppParams = NppParameters::getInstance();
 	const ScintillaViewParams& svp = nppParams.getSVP();
-	
+
+	// RE2: extra line spacing for readability
+	execute(SCI_SETEXTRAASCENT, 2);
+	execute(SCI_SETEXTRADESCENT, 2);
+
 	StyleArray& stylers = nppParams.getMiscStylerArray();
 	const Style* pStyle{};
 
