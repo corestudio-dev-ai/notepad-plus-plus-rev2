@@ -188,6 +188,24 @@ void Notepad_plus::command(int id)
 		}
 		break;
 
+		case IDM_EDIT_INSERT_SUGGESTED_CSS:
+		{
+			_pEditView->execute(SCI_BEGINUNDOACTION);
+			_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(""));
+			_pEditView->addGenericText(L"<style>\nbody {\n\tbackground-color: #121212;\n\tcolor: #ffffff;\n\tfont-family: 'Inter', sans-serif;\n\tdisplay: flex;\n\tjustify-content: center;\n\talign-items: center;\n\theight: 100vh;\n\tmargin: 0;\n}\n.glass-panel {\n\tbackground: rgba(255, 255, 255, 0.05);\n\tbackdrop-filter: blur(10px);\n\tborder-radius: 12px;\n\tborder: 1px solid rgba(255, 255, 255, 0.1);\n\tpadding: 2rem;\n\tbox-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);\n\tanimation: pulse 2s infinite alternate;\n}\n@keyframes pulse {\n\t0% { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); }\n\t100% { box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2); }\n}\n</style>\n");
+			_pEditView->execute(SCI_ENDUNDOACTION);
+		}
+		break;
+
+		case IDM_EDIT_INSERT_SUGGESTED_JS:
+		{
+			_pEditView->execute(SCI_BEGINUNDOACTION);
+			_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(""));
+			_pEditView->addGenericText(L"<script>\ndocument.addEventListener('DOMContentLoaded', () => {\n\tconsole.log('Antigravity Framework Initialized!');\n\n\tconst panel = document.createElement('div');\n\tpanel.className = 'glass-panel';\n\tpanel.innerHTML = '<h2>Hello, Developer!</h2><p>Welcome to the modernized experience.</p>';\n\tdocument.body.appendChild(panel);\n});\n</script>\n");
+			_pEditView->execute(SCI_ENDUNDOACTION);
+		}
+		break;
+
 		case IDM_FILE_OPEN:
 		{
 			fileOpen();

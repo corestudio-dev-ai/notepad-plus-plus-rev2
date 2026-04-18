@@ -169,6 +169,8 @@
     #define    IDM_EDIT_INSERT_DATETIME_SHORT                   (IDM_EDIT + 84)
     #define    IDM_EDIT_INSERT_DATETIME_LONG                    (IDM_EDIT + 85)
     #define    IDM_EDIT_INSERT_DATETIME_CUSTOMIZED              (IDM_EDIT + 86)
+    #define    IDM_EDIT_INSERT_SUGGESTED_CSS                    (IDM_EDIT + 107)
+    #define    IDM_EDIT_INSERT_SUGGESTED_JS                     (IDM_EDIT + 108)
     #define    IDM_EDIT_COPY_ALL_NAMES                          (IDM_EDIT + 87)
     #define    IDM_EDIT_COPY_ALL_PATHS                          (IDM_EDIT + 88)
     #define    IDM_EDIT_BEGINENDSELECT_COLUMNMODE               (IDM_EDIT + 89)

@@ -1574,7 +1574,15 @@ void EditView::DrawCarets(Surface *surface, const EditModel &model, const ViewSt
 					rcCaret.right = rcCaret.left + vsDraw.caret.width;
 				}
 				const Element elementCaret = mainCaret ? Element::Caret : Element::CaretAdditional;
-				const ColourRGBA caretColour = vsDraw.ElementColourForced(elementCaret);
+				ColourRGBA caretColour = vsDraw.ElementColourForced(elementCaret);
+				if (caretBlinkState && mainCaret) {
+					auto now = std::chrono::steady_clock::now().time_since_epoch();
+					double ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+					int r = (int)(sin(ms/300.0) * 127 + 128);
+					int g = (int)(sin(ms/300.0 + 2.0*3.14159/3.0) * 127 + 128);
+					int b = (int)(sin(ms/300.0 + 4.0*3.14159/3.0) * 127 + 128);
+					caretColour = ColourRGBA(r, g, b);
+				}
 				//assert(caretColour.IsOpaque());
 				if (drawBlockCaret) {
 					DrawBlockCaret(surface, model, vsDraw, ll, subLine, xOrigin, offset, posCaret.Position(), rcCaret, caretColour);

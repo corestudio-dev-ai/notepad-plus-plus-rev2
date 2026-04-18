@@ -500,6 +500,9 @@ BEGIN
                 MENUITEM "Date Time (short)",        IDM_EDIT_INSERT_DATETIME_SHORT
                 MENUITEM "Date Time (long)",         IDM_EDIT_INSERT_DATETIME_LONG
                 MENUITEM "Date Time (customized)",   IDM_EDIT_INSERT_DATETIME_CUSTOMIZED
+                MENUITEM SEPARATOR
+                MENUITEM "Suggested CSS",            IDM_EDIT_INSERT_SUGGESTED_CSS
+                MENUITEM "Suggested JavaScript",     IDM_EDIT_INSERT_SUGGESTED_JS
         END
         POPUP "Cop&y to Clipboard"
         BEGIN

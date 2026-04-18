@@ -640,7 +640,7 @@ public:
 
 public:
 	std::vector<std::pair<char, char>> _matchedPairs;
-	bool _doHtmlXmlTag = false;
+	bool _doHtmlXmlTag = true;
 	bool _doParentheses = false;
 	bool _doBrackets = false;
 	bool _doCurlyBrackets = false;
@@ -680,7 +680,7 @@ struct AdvancedOptions final
 
 struct DarkModeConf final
 {
-	bool _isEnabled = false;
+	bool _isEnabled = true;
 	bool _isEnabledPlugin = true;
 	NppDarkMode::ColorTone _colorTone = NppDarkMode::ColorTone::blackTone;
 	NppDarkMode::Colors _customColors = NppDarkMode::getDarkModeDefaultColors();
