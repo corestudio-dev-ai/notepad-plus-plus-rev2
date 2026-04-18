@@ -18,8 +18,10 @@
 
 #include <shlwapi.h>
 #include <wininet.h>
+#include <windowsx.h>
 
 #include <ctime>
+#include <map>
 #include <memory>
 
 #include "NppXml.h"
@@ -62,7 +64,7 @@ static constexpr ToolBarButtonUnit toolBarIcons[]{
     {IDM_FILE_SAVEALL,                 IDI_SAVEALL_ICON,           IDI_SAVEALL_DISABLE_ICON,      IDI_SAVEALL_ICON2,          IDI_SAVEALL_DISABLE_ICON2,     IDI_SAVEALL_ICON_DM,           IDI_SAVEALL_DISABLE_ICON_DM,      IDI_SAVEALL_ICON_DM2,          IDI_SAVEALL_DISABLE_ICON_DM2,     IDR_SAVEALL},
     {IDM_FILE_CLOSE,                   IDI_CLOSE_ICON,             IDI_CLOSE_ICON,                IDI_CLOSE_ICON2,            IDI_CLOSE_ICON2,               IDI_CLOSE_ICON_DM,             IDI_CLOSE_ICON_DM,                IDI_CLOSE_ICON_DM2,            IDI_CLOSE_ICON_DM2,               IDR_CLOSEFILE},
     {IDM_FILE_CLOSEALL,                IDI_CLOSEALL_ICON,          IDI_CLOSEALL_ICON,             IDI_CLOSEALL_ICON2,         IDI_CLOSEALL_ICON2,            IDI_CLOSEALL_ICON_DM,          IDI_CLOSEALL_ICON_DM,             IDI_CLOSEALL_ICON_DM2,         IDI_CLOSEALL_ICON_DM2,            IDR_CLOSEALL},
-    {IDM_FILE_PRINT,                   IDI_PRINT_ICON,             IDI_PRINT_ICON,                IDI_PRINT_ICON2,            IDI_PRINT_ICON2,               IDI_PRINT_ICON_DM,             IDI_PRINT_ICON_DM,                IDI_PRINT_ICON_DM2,            IDI_PRINT_ICON_DM2,               IDR_PRINT},
+    // RE2: Print button removed
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
@@ -82,12 +84,7 @@ static constexpr ToolBarButtonUnit toolBarIcons[]{
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
-    {IDM_SEARCH_FIND,                  IDI_FIND_ICON,              IDI_FIND_ICON,                 IDI_FIND_ICON2,             IDI_FIND_ICON2,                IDI_FIND_ICON_DM,              IDI_FIND_ICON_DM,                 IDI_FIND_ICON_DM2,             IDI_FIND_ICON_DM2,                IDR_FIND},
-    {IDM_SEARCH_REPLACE,               IDI_REPLACE_ICON,           IDI_REPLACE_ICON,              IDI_REPLACE_ICON2,          IDI_REPLACE_ICON2,             IDI_REPLACE_ICON_DM,           IDI_REPLACE_ICON_DM,              IDI_REPLACE_ICON_DM2,          IDI_REPLACE_ICON_DM2,             IDR_REPLACE},
-
-    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
-    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+    // RE2: Find/Replace toolbar buttons removed
     {IDM_VIEW_ZOOMIN,                  IDI_ZOOMIN_ICON,            IDI_ZOOMIN_ICON,               IDI_ZOOMIN_ICON2,           IDI_ZOOMIN_ICON2,              IDI_ZOOMIN_ICON_DM,            IDI_ZOOMIN_ICON_DM,               IDI_ZOOMIN_ICON_DM2,           IDI_ZOOMIN_ICON_DM2,              IDR_ZOOMIN},
     {IDM_VIEW_ZOOMOUT,                 IDI_ZOOMOUT_ICON,           IDI_ZOOMOUT_ICON,              IDI_ZOOMOUT_ICON2,          IDI_ZOOMOUT_ICON2,             IDI_ZOOMOUT_ICON_DM,           IDI_ZOOMOUT_ICON_DM,              IDI_ZOOMOUT_ICON_DM2,          IDI_ZOOMOUT_ICON_DM2,             IDR_ZOOMOUT},
 
@@ -450,6 +447,25 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	_statusBar.setPartWidth(STATUSBAR_UNICODE_TYPE, DPIManagerV2::scale(120, dpi));
 	_statusBar.setPartWidth(STATUSBAR_TYPING_MODE, DPIManagerV2::scale(30, dpi));
 	_statusBar.display(willBeShown);
+
+	// RE2: create Accept/Reject changes bar
+	{
+		static const wchar_t* kRE2BarClass = L"RE2CommitBar";
+		WNDCLASSEX wc = { sizeof(wc) };
+		if (!::GetClassInfoExW(_pPublicInterface->getHinst(), kRE2BarClass, &wc))
+		{
+			wc.cbSize = sizeof(wc);
+			wc.lpfnWndProc = Notepad_plus::re2CommitBarProcStatic;
+			wc.hInstance = _pPublicInterface->getHinst();
+			wc.hCursor = ::LoadCursor(nullptr, IDC_HAND);
+			wc.hbrBackground = nullptr;
+			wc.lpszClassName = kRE2BarClass;
+			::RegisterClassExW(&wc);
+		}
+		_re2CommitBar = ::CreateWindowExW(0, kRE2BarClass, L"", WS_CHILD | WS_VISIBLE,
+			0, 0, 10, _re2CommitBarHeight, hwnd, nullptr,
+			_pPublicInterface->getHinst(), this);
+	}
 
 	_pMainWindow = &_mainDocTab;
 
@@ -4602,7 +4618,8 @@ void Notepad_plus::getMainClientRect(RECT &rc) const
 {
     _pPublicInterface->getClientRect(rc);
 	rc.top += _rebarTop.getHeight();
-	rc.bottom -= rc.top + _rebarBottom.getHeight() + _statusBar.getHeight();
+	int re2BarH = _re2CommitBar ? _re2CommitBarHeight : 0;
+	rc.bottom -= rc.top + _rebarBottom.getHeight() + _statusBar.getHeight() + re2BarH;
 }
 
 void Notepad_plus::showView(int whichOne)
@@ -9312,4 +9329,193 @@ void Notepad_plus::changeReadOnlyUserModeForAllOpenedTabs(const bool ro)
 			}
 		}
 	}
+}
+
+// ===== RE2: Accept/Reject changes bar =====
+namespace {
+	struct Re2BarState {
+		bool hoverAccept = false;
+		bool hoverReject = false;
+		bool pressedAccept = false;
+		bool pressedReject = false;
+		bool tracking = false;
+	};
+	Re2BarState& re2State(HWND h) {
+		static std::map<HWND, Re2BarState> map;
+		return map[h];
+	}
+	void getButtonRects(HWND hwnd, RECT& rAccept, RECT& rReject) {
+		RECT rc; ::GetClientRect(hwnd, &rc);
+		int cx = (rc.right + rc.left) / 2;
+		int btnW = 140, btnH = 26, gap = 12;
+		int y = (rc.bottom - btnH) / 2;
+		rAccept = { cx - btnW - gap / 2, y, cx - gap / 2, y + btnH };
+		rReject = { cx + gap / 2, y, cx + btnW + gap / 2, y + btnH };
+	}
+	bool currentBufferDirty(Notepad_plus_Window* win) {
+		if (!win) return false;
+		HWND parent = win->getHSelf();
+		// Ask parent via a no-op — use a simpler proxy: check title suffix " * " is fragile.
+		// Instead, rely on SC_SAVEPOINTREACHED/LEFT tracked through repaint notifications.
+		return ::GetPropW(parent, L"RE2_DIRTY") != nullptr;
+	}
+}
+
+LRESULT CALLBACK Notepad_plus::re2CommitBarProcStatic(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	Notepad_plus* self = nullptr;
+	if (msg == WM_NCCREATE) {
+		auto* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
+		self = reinterpret_cast<Notepad_plus*>(cs->lpCreateParams);
+		::SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
+	} else {
+		self = reinterpret_cast<Notepad_plus*>(::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+	}
+	if (self)
+		return self->re2CommitBarProc(hwnd, msg, wParam, lParam);
+	return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
+LRESULT Notepad_plus::re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	auto& st = re2State(hwnd);
+	switch (msg)
+	{
+		case WM_ERASEBKGND:
+			return 1; // double-buffered paint below
+
+		case WM_PAINT:
+		{
+			PAINTSTRUCT ps;
+			HDC hdcWin = ::BeginPaint(hwnd, &ps);
+			RECT rc; ::GetClientRect(hwnd, &rc);
+
+			HDC hdc = ::CreateCompatibleDC(hdcWin);
+			HBITMAP bmp = ::CreateCompatibleBitmap(hdcWin, rc.right, rc.bottom);
+			HGDIOBJ oldBmp = ::SelectObject(hdc, bmp);
+
+			// Background — RE2 Abyss rail color
+			HBRUSH bg = ::CreateSolidBrush(RGB(0x07, 0x15, 0x24));
+			::FillRect(hdc, &rc, bg);
+			::DeleteObject(bg);
+
+			// Top separator line
+			HPEN pen = ::CreatePen(PS_SOLID, 1, RGB(0x18, 0x38, 0x5F));
+			HGDIOBJ oldPen = ::SelectObject(hdc, pen);
+			::MoveToEx(hdc, rc.left, rc.top, nullptr);
+			::LineTo(hdc, rc.right, rc.top);
+			::SelectObject(hdc, oldPen);
+			::DeleteObject(pen);
+
+			RECT rA, rR; getButtonRects(hwnd, rA, rR);
+
+			auto drawBtn = [&](RECT r, bool hover, bool pressed, COLORREF border, COLORREF fill, COLORREF fillHover, const wchar_t* label) {
+				HBRUSH b = ::CreateSolidBrush(pressed ? border : (hover ? fillHover : fill));
+				::FillRect(hdc, &r, b);
+				::DeleteObject(b);
+				HPEN bp = ::CreatePen(PS_SOLID, 1, border);
+				HGDIOBJ oldBp = ::SelectObject(hdc, bp);
+				HGDIOBJ oldBr = ::SelectObject(hdc, ::GetStockObject(NULL_BRUSH));
+				::Rectangle(hdc, r.left, r.top, r.right, r.bottom);
+				::SelectObject(hdc, oldBp);
+				::SelectObject(hdc, oldBr);
+				::DeleteObject(bp);
+
+				HFONT font = (HFONT)::GetStockObject(DEFAULT_GUI_FONT);
+				HGDIOBJ oldF = ::SelectObject(hdc, font);
+				::SetBkMode(hdc, TRANSPARENT);
+				::SetTextColor(hdc, pressed ? RGB(0x07, 0x15, 0x24) : RGB(0xE6, 0xEE, 0xF8));
+				::DrawTextW(hdc, label, -1, &r, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+				::SelectObject(hdc, oldF);
+			};
+
+			// Accept (green)
+			drawBtn(rA, st.hoverAccept, st.pressedAccept,
+				RGB(0x50, 0xDC, 0x64), RGB(0x08, 0x30, 0x1F), RGB(0x10, 0x50, 0x30),
+				L"\u2713  Accept Changes");
+			// Reject (red)
+			drawBtn(rR, st.hoverReject, st.pressedReject,
+				RGB(0xFF, 0x40, 0x40), RGB(0x30, 0x08, 0x08), RGB(0x50, 0x10, 0x10),
+				L"\u2717  Reject Changes");
+
+			::BitBlt(hdcWin, 0, 0, rc.right, rc.bottom, hdc, 0, 0, SRCCOPY);
+			::SelectObject(hdc, oldBmp);
+			::DeleteObject(bmp);
+			::DeleteDC(hdc);
+			::EndPaint(hwnd, &ps);
+			return 0;
+		}
+
+		case WM_MOUSEMOVE:
+		{
+			if (!st.tracking) {
+				TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, hwnd, 0 };
+				::TrackMouseEvent(&tme);
+				st.tracking = true;
+			}
+			POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+			RECT rA, rR; getButtonRects(hwnd, rA, rR);
+			bool hA = ::PtInRect(&rA, pt), hR = ::PtInRect(&rR, pt);
+			if (hA != st.hoverAccept || hR != st.hoverReject) {
+				st.hoverAccept = hA; st.hoverReject = hR;
+				::InvalidateRect(hwnd, nullptr, FALSE);
+			}
+			return 0;
+		}
+
+		case WM_MOUSELEAVE:
+			st.tracking = false;
+			st.hoverAccept = st.hoverReject = false;
+			st.pressedAccept = st.pressedReject = false;
+			::InvalidateRect(hwnd, nullptr, FALSE);
+			return 0;
+
+		case WM_LBUTTONDOWN:
+		{
+			POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+			RECT rA, rR; getButtonRects(hwnd, rA, rR);
+			if (::PtInRect(&rA, pt)) { st.pressedAccept = true; ::SetCapture(hwnd); ::InvalidateRect(hwnd, nullptr, FALSE); }
+			else if (::PtInRect(&rR, pt)) { st.pressedReject = true; ::SetCapture(hwnd); ::InvalidateRect(hwnd, nullptr, FALSE); }
+			return 0;
+		}
+
+		case WM_LBUTTONUP:
+		{
+			::ReleaseCapture();
+			POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+			RECT rA, rR; getButtonRects(hwnd, rA, rR);
+			bool clickAccept = st.pressedAccept && ::PtInRect(&rA, pt);
+			bool clickReject = st.pressedReject && ::PtInRect(&rR, pt);
+			st.pressedAccept = st.pressedReject = false;
+			::InvalidateRect(hwnd, nullptr, FALSE);
+			HWND parent = ::GetParent(hwnd);
+			if (clickAccept) {
+				// Accept = commit = save to disk
+				::SendMessage(parent, WM_COMMAND, IDM_FILE_SAVE, 0);
+			} else if (clickReject) {
+				// Reject = discard uncommitted = reload from disk
+				::SendMessage(parent, WM_COMMAND, IDM_FILE_RELOAD, 0);
+			}
+			return 0;
+		}
+
+		case WM_SETCURSOR:
+		{
+			POINT pt; ::GetCursorPos(&pt); ::ScreenToClient(hwnd, &pt);
+			RECT rA, rR; getButtonRects(hwnd, rA, rR);
+			if (::PtInRect(&rA, pt) || ::PtInRect(&rR, pt)) {
+				::SetCursor(::LoadCursor(nullptr, IDC_HAND));
+				return TRUE;
+			}
+			::SetCursor(::LoadCursor(nullptr, IDC_ARROW));
+			return TRUE;
+		}
+	}
+	return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
+void Notepad_plus::re2RepaintCommitBar()
+{
+	if (_re2CommitBar)
+		::InvalidateRect(_re2CommitBar, nullptr, FALSE);
 }

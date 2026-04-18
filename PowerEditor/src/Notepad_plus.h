@@ -278,6 +278,11 @@ public:
 
 	void changeReadOnlyUserModeForAllOpenedTabs(const bool ro);
 
+	// RE2: commit bar (bottom-center Accept/Reject buttons)
+	static LRESULT CALLBACK re2CommitBarProcStatic(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	LRESULT re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	void re2RepaintCommitBar();
+
 private:
 	Notepad_plus_Window* _pPublicInterface = nullptr;
     Window* _pMainWindow = nullptr;
@@ -313,6 +318,10 @@ private:
     StatusBar _statusBar;
 	ReBar _rebarTop;
 	ReBar _rebarBottom;
+
+	// RE2 Accept/Reject changes bar (bottom center, above status bar)
+	HWND _re2CommitBar = nullptr;
+	int _re2CommitBarHeight = 40;
 
 	// Dialog
 	FindReplaceDlg _findReplaceDlg;

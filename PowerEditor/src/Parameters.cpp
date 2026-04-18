@@ -120,7 +120,7 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_NULL,    IDM_FILE_DELETE,                              false, false, false, nullptr },
 	{ VK_NULL,    IDM_FILE_LOADSESSION,                         false, false, false, nullptr },
 	{ VK_NULL,    IDM_FILE_SAVESESSION,                         false, false, false, nullptr },
-	{ VK_P,       IDM_FILE_PRINT,                               true,  false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_PRINT,                               false, false, false, nullptr }, // RE2: print removed
 	{ VK_NULL,    IDM_FILE_PRINTNOW,                            false, false, false, nullptr },
 	{ VK_T,       IDM_FILE_RESTORELASTCLOSEDFILE,               true,  false, true,  L"Restore Recent Closed File" },
 	{ VK_F4,      IDM_FILE_EXIT,                                false, true,  false, nullptr },
@@ -236,16 +236,17 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_NULL,    IDM_EDIT_SETREADONLYFORALLDOCS,               false, false, false, nullptr },
 	{ VK_NULL,    IDM_EDIT_CLEARREADONLYFORALLDOCS,             false, false, false, nullptr },
 	{ VK_NULL,    IDM_EDIT_TOGGLESYSTEMREADONLY,                false, false, false, nullptr },
-	{ VK_F,       IDM_SEARCH_FIND,                              true,  false, false, nullptr },
-	{ VK_F,       IDM_SEARCH_FINDINFILES,                       true,  false, true,  nullptr },
-	{ VK_F3,      IDM_SEARCH_FINDNEXT,                          false, false, false, nullptr },
-	{ VK_F3,      IDM_SEARCH_FINDPREV,                          false, false, true,  nullptr },
-	{ VK_F3,      IDM_SEARCH_SETANDFINDNEXT,                    true,  false, false, nullptr },
-	{ VK_F3,      IDM_SEARCH_SETANDFINDPREV,                    true,  false, true,  nullptr },
-	{ VK_F3,      IDM_SEARCH_VOLATILE_FINDNEXT,                 true,  true,  false, nullptr },
-	{ VK_F3,      IDM_SEARCH_VOLATILE_FINDPREV,                 true,  true,  true,  nullptr },
-	{ VK_H,       IDM_SEARCH_REPLACE,                           true,  false, false, nullptr },
-	{ VK_I,       IDM_SEARCH_FINDINCREMENT,                     true,  true,  false, nullptr },
+	// RE2: Find/Replace disabled
+	{ VK_NULL,    IDM_SEARCH_FIND,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_FINDINFILES,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_FINDNEXT,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_FINDPREV,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_SETANDFINDNEXT,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_SETANDFINDPREV,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_VOLATILE_FINDNEXT,                 false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_VOLATILE_FINDPREV,                 false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_REPLACE,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_FINDINCREMENT,                     false, false, false, nullptr },
 	{ VK_F7,      IDM_FOCUS_ON_FOUND_RESULTS,                   false, false, false, nullptr },
 	{ VK_F4,      IDM_SEARCH_GOTOPREVFOUND,                     false, false, true,  nullptr },
 	{ VK_F4,      IDM_SEARCH_GOTONEXTFOUND,                     false, false, false, nullptr },
@@ -5511,6 +5512,9 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 				}
 
 			}
+			// RE2: force a modern large filled monochrome toolbar
+			_nppGUI._tbIconInfo._tbIconSet = toolBarStatusType::TB_LARGE2;
+			_nppGUI._tbIconInfo._tbUseMono = true;
 		}
 		// <GUIConfig name="StatusBar">show</GUIConfig>
 		else if (std::strcmp(nm, "StatusBar") == 0)
@@ -6494,6 +6498,9 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			darkTbInfo._tbColor = getRangeDefaultAttribute(childNode, "darkTbFluentColor", defaultColor, custom, darkTbInfo._tbColor);
 			darkTbInfo._tbCustomColor = NppXml::intAttribute(childNode, "darkTbFluentCustomColor", darkTbInfo._tbCustomColor);
 			darkTbInfo._tbUseMono = getBoolAttribute(childNode, "darkTbFluentMono");
+			// RE2: force modern large filled monochrome toolbar
+			darkTbInfo._tbIconSet = TB_LARGE2;
+			darkTbInfo._tbUseMono = true;
 			darkDefaults._tabIconSet = getRangeDefaultAttribute(childNode, "darkTabIconSet", 0, 2, darkDefaults._tabIconSet);
 			darkDefaults._tabUseTheme = getBoolAttribute(childNode, "darkTabUseTheme");
 

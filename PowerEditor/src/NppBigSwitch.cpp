@@ -685,7 +685,10 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 			int rebarBottomHeight = _rebarBottom.getHeight();
 			int statusBarHeight = _statusBar.getHeight();
-			::MoveWindow(_rebarBottom.getHSelf(), 0, rc.bottom - rebarBottomHeight - statusBarHeight, rc.right, rebarBottomHeight, TRUE);
+			int re2BarHeight = _re2CommitBar ? _re2CommitBarHeight : 0;
+			::MoveWindow(_rebarBottom.getHSelf(), 0, rc.bottom - rebarBottomHeight - statusBarHeight - re2BarHeight, rc.right, rebarBottomHeight, TRUE);
+			if (_re2CommitBar)
+				::MoveWindow(_re2CommitBar, 0, rc.bottom - statusBarHeight - re2BarHeight, rc.right, re2BarHeight, TRUE);
 
 			getMainClientRect(rc);
 			_dockingManager.reSizeTo(rc);
