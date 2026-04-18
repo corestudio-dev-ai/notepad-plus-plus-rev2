@@ -2438,13 +2438,19 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 
 		if (!_nativeLangSpeaker.getDoSaveOrNotStrings(title, msg))
 		{
-			title = L"Save";
-			msg = L"Save file \"$STR_REPLACE$\" ?";
+			title = L"Uncommitted changes";
+			msg = L"\"$STR_REPLACE$\" has uncommitted changes.\rCommit changes now or discard them?";
 		}
 
 		msg = stringReplace(msg, L"$STR_REPLACE$", fn);
 
-		return ::MessageBox(_pPublicInterface->getHSelf(), msg.c_str(), title.c_str(), MB_YESNOCANCEL | MB_ICONQUESTION | MB_APPLMODAL);
+		// RE2: route through the custom dialog so Commit / Discard wording is visible
+		DoSaveOrNotBox doSaveOrNotBox;
+		doSaveOrNotBox.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), fn, isMulti);
+		doSaveOrNotBox.doDialog(_nativeLangSpeaker.isRTL());
+		int _re2BtnId = doSaveOrNotBox.getClickedButtonId();
+		doSaveOrNotBox.destroy();
+		return _re2BtnId;
 	}
 
 	DoSaveOrNotBox doSaveOrNotBox;

@@ -6616,6 +6616,11 @@ void NppParameters::feedScintillaParam(const NppXml::Element& element)
 				break;
 			}
 		}
+
+		// RE2: Git-like tracking is a core feature, force both on regardless of config
+		_svp._isChangeHistoryMarginEnabled = true;
+		_svp._isChangeHistoryIndicatorEnabled = true;
+		_svp._isChangeHistoryEnabled4NextSession = marginIndicator;
 	}
 
 	// Indent GuideLine
