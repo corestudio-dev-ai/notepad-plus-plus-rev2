@@ -66,10 +66,10 @@ void Notepad_plus_Window::setStartupBgColor(COLORREF BgColor)
 }
 
 
-// ===== RE2 Start Center: owner-painted tile dialog =====
+// ===== V2 Start Center: owner-painted tile dialog =====
 namespace re2 {
 
-constexpr int IDD_RE2_STARTCENTER = 27000;
+constexpr int IDD_V2_STARTCENTER = 27000;
 constexpr int kTileCount = 3;
 constexpr int kDialogW = 720;
 constexpr int kDialogH = 480;
@@ -228,7 +228,7 @@ static void paintDialog(HWND hDlg, const DlgState& state)
 		DrawTextW(hdc, L"Notepad++", -1, &tRc, DT_LEFT | DT_SINGLELINE);
 		tRc.top += 30; tRc.bottom += 30;
 		SetTextColor(hdc, ACCENT);
-		DrawTextW(hdc, L"RE2", -1, &tRc, DT_LEFT | DT_SINGLELINE);
+		DrawTextW(hdc, L"V2", -1, &tRc, DT_LEFT | DT_SINGLELINE);
 		SelectObject(hdc, oldF);
 		DeleteObject(titleFont);
 	}
@@ -389,19 +389,20 @@ static INT_PTR CALLBACK startCenterProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM l
 
 } // namespace re2
 
-void Notepad_plus_Window::showStartCenterRE2()
+void Notepad_plus_Window::showStartCenterV2()
 {
-	INT_PTR result = DialogBoxParam(_hInst, MAKEINTRESOURCE(re2::IDD_RE2_STARTCENTER),
+	INT_PTR result = DialogBoxParam(_hInst, MAKEINTRESOURCE(re2::IDD_V2_STARTCENTER),
 		_hSelf, re2::startCenterProc, 0);
 	switch (result)
 	{
-		case 1002: createBlankHtmlRE2(); break;
-		case 1003: createWebProjectRE2(); break;
+		case 1001: _notepad_plus_plus_core.fileNew(); break;
+		case 1002: createBlankHtmlV2(); break;
+		case 1003: createWebProjectV2(); break;
 		default: break;
 	}
 }
 
-void Notepad_plus_Window::createBlankHtmlRE2()
+void Notepad_plus_Window::createBlankHtmlV2()
 {
 	_notepad_plus_plus_core.fileNew();
 	::SendMessage(_hSelf, WM_COMMAND, IDM_LANG_HTML, 0);
@@ -420,7 +421,7 @@ void Notepad_plus_Window::createBlankHtmlRE2()
 	_notepad_plus_plus_core._pEditView->execute(SCI_SETTEXT, 0, reinterpret_cast<LPARAM>(html));
 }
 
-void Notepad_plus_Window::createWebProjectRE2()
+void Notepad_plus_Window::createWebProjectV2()
 {
 	IFileDialog* pfd = nullptr;
 	if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&pfd))))
@@ -460,7 +461,7 @@ void Notepad_plus_Window::createWebProjectRE2()
 		"\tmargin: 2rem;\r\n}\r\n");
 	writeFile(base + L"\\script.js",
 		"document.addEventListener('DOMContentLoaded', () => {\r\n"
-		"\tconsole.log('RE2 web project ready');\r\n});\r\n");
+		"\tconsole.log('V2 web project ready');\r\n});\r\n");
 
 	std::wstring indexPath = base + L"\\index.html";
 	BufferID bid = _notepad_plus_plus_core.doOpen(indexPath);
@@ -510,7 +511,7 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 	_hSelf = ::CreateWindowEx(
 		WS_EX_ACCEPTFILES | (_notepad_plus_plus_core._nativeLangSpeaker.isRTL() ? WS_EX_LAYOUTRTL : 0),
 		_className,
-		L"Notepad++ RE2",
+		L"Notepad++ V2",
 		(WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN),
 		// CreateWindowEx bug : set all 0 to walk around the problem
 		0, 0, 0, 0,
@@ -852,13 +853,13 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 	if (nppParams.doPrintAndExit())
 		::SendMessage(_hSelf, NPPM_INTERNAL_PRNTANDQUIT, 0, 0);
 
-	// RE2: first-run onboarding — show welcome once, gated by a marker file in the user config dir
+	// V2: first-run onboarding — show welcome once, gated by a marker file in the user config dir
 	{
 		std::wstring markerPath = nppParams.getUserPath();
 		pathAppend(markerPath, L"re2_onboarded.marker");
 		if (!doesFileExist(markerPath.c_str()))
 		{
-			showStartCenterRE2();
+			showStartCenterV2();
 			HANDLE h = ::CreateFileW(markerPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 			if (h != INVALID_HANDLE_VALUE)
 				::CloseHandle(h);

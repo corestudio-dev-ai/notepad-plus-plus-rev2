@@ -988,7 +988,7 @@ void AutoCompletion::insertMatchedChars(int character, const MatchedPairConf & m
 
 		case '>':
 		{
-			// RE2: extend HTML-style tag auto-close beyond L_HTML/L_XML to PHP, ASP, JSP, plain text and user/external
+			// V2: extend HTML-style tag auto-close beyond L_HTML/L_XML to PHP, ASP, JSP, plain text and user/external
 			// lexers, so "<div>" auto-closes in any file with HTML content.
 			{
 				const bool isTagLang = _curLang == L_HTML || _curLang == L_XML

@@ -883,7 +883,7 @@ struct ScintillaViewParams
 	bool _bookMarkMarginShow = true;
 	
 	bool _isChangeHistoryMarginEnabled = true;
-	bool _isChangeHistoryIndicatorEnabled = true; // RE2: Git-like red/green tracking always on
+	bool _isChangeHistoryIndicatorEnabled = true; // V2: Git-like red/green tracking always on
 	changeHistoryState _isChangeHistoryEnabled4NextSession = changeHistoryState::marginIndicator; // no -> 0 (disable), yes -> 1 (margin), yes ->2 (indicator), yes-> 3 (margin + indicator)
 
 	folderStyle _folderStyle = folderStyle::FOLDER_STYLE_BOX; //"simple", "arrow", "circle", "box" and "none"

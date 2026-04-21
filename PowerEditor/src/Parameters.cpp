@@ -120,7 +120,7 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_NULL,    IDM_FILE_DELETE,                              false, false, false, nullptr },
 	{ VK_NULL,    IDM_FILE_LOADSESSION,                         false, false, false, nullptr },
 	{ VK_NULL,    IDM_FILE_SAVESESSION,                         false, false, false, nullptr },
-	{ VK_NULL,    IDM_FILE_PRINT,                               false, false, false, nullptr }, // RE2: print removed
+	{ VK_NULL,    IDM_FILE_PRINT,                               false, false, false, nullptr }, // V2: print removed
 	{ VK_NULL,    IDM_FILE_PRINTNOW,                            false, false, false, nullptr },
 	{ VK_T,       IDM_FILE_RESTORELASTCLOSEDFILE,               true,  false, true,  L"Restore Recent Closed File" },
 	{ VK_F4,      IDM_FILE_EXIT,                                false, true,  false, nullptr },
@@ -236,7 +236,7 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_NULL,    IDM_EDIT_SETREADONLYFORALLDOCS,               false, false, false, nullptr },
 	{ VK_NULL,    IDM_EDIT_CLEARREADONLYFORALLDOCS,             false, false, false, nullptr },
 	{ VK_NULL,    IDM_EDIT_TOGGLESYSTEMREADONLY,                false, false, false, nullptr },
-	// RE2: Find/Replace disabled
+	// V2: Find/Replace disabled
 	{ VK_NULL,    IDM_SEARCH_FIND,                              false, false, false, nullptr },
 	{ VK_NULL,    IDM_SEARCH_FINDINFILES,                       false, false, false, nullptr },
 	{ VK_NULL,    IDM_SEARCH_FINDNEXT,                          false, false, false, nullptr },
@@ -1522,10 +1522,10 @@ bool NppParameters::load()
 		::CopyFile(srcStylersPath.c_str(), _stylerPath.c_str(), TRUE);
 	}
 
-	// RE2: force Abyss-RE2 as the only theme
+	// V2: force Abyss-V2 as the only theme
 	{
 		std::wstring abyssPath(_nppPath);
-		pathAppend(abyssPath, L"themes\\Abyss-RE2.xml");
+		pathAppend(abyssPath, L"themes\\Abyss-V2.xml");
 		if (doesFileExist(abyssPath.c_str()))
 			_nppGUI._themeName.assign(abyssPath);
 		else
@@ -5512,7 +5512,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 				}
 
 			}
-			// RE2: force a modern large filled monochrome toolbar
+			// V2: force a modern large filled monochrome toolbar
 			_nppGUI._tbIconInfo._tbIconSet = toolBarStatusType::TB_LARGE2;
 			_nppGUI._tbIconInfo._tbUseMono = true;
 		}
@@ -6201,7 +6201,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			{
 				using enum NppGUI::AutocStatus;
 				(void)getRangeDefaultAttribute(childNode, "autoCAction", autoc_none, autoc_both, _nppGUI._autocStatus);
-				_nppGUI._autocStatus = autoc_both; // RE2: always on (word + function completion)
+				_nppGUI._autocStatus = autoc_both; // V2: always on (word + function completion)
 			}
 
 			// from preferenceDlg.cpp
@@ -6219,7 +6219,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "auto-insert") == 0)
 		{
 			(void)getBoolAttribute(childNode, "htmlXmlTag");
-			_nppGUI._matchedPairConf._doHtmlXmlTag = true; // RE2: always on
+			_nppGUI._matchedPairConf._doHtmlXmlTag = true; // V2: always on
 			_nppGUI._matchedPairConf._doParentheses = getBoolAttribute(childNode, "parentheses");
 			_nppGUI._matchedPairConf._doBrackets = getBoolAttribute(childNode, "brackets");
 			_nppGUI._matchedPairConf._doCurlyBrackets = getBoolAttribute(childNode, "curlyBrackets");
@@ -6451,7 +6451,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "DarkMode") == 0)
 		{
 			(void)getBoolAttribute(childNode, "enable");
-			_nppGUI._darkmode._isEnabled = true; // RE2: light mode removed, dark mode forced
+			_nppGUI._darkmode._isEnabled = true; // V2: light mode removed, dark mode forced
 
 			using enum NppDarkMode::ColorTone;
 			const int clrTone = NppXml::intAttribute(childNode, "colorTone", 0);
@@ -6498,7 +6498,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			darkTbInfo._tbColor = getRangeDefaultAttribute(childNode, "darkTbFluentColor", defaultColor, custom, darkTbInfo._tbColor);
 			darkTbInfo._tbCustomColor = NppXml::intAttribute(childNode, "darkTbFluentCustomColor", darkTbInfo._tbCustomColor);
 			darkTbInfo._tbUseMono = getBoolAttribute(childNode, "darkTbFluentMono");
-			// RE2: force modern large filled monochrome toolbar
+			// V2: force modern large filled monochrome toolbar
 			darkTbInfo._tbIconSet = TB_LARGE2;
 			darkTbInfo._tbUseMono = true;
 			darkDefaults._tabIconSet = getRangeDefaultAttribute(childNode, "darkTabIconSet", 0, 2, darkDefaults._tabIconSet);
@@ -6624,7 +6624,7 @@ void NppParameters::feedScintillaParam(const NppXml::Element& element)
 			}
 		}
 
-		// RE2: Git-like tracking is a core feature, force both on regardless of config
+		// V2: Git-like tracking is a core feature, force both on regardless of config
 		_svp._isChangeHistoryMarginEnabled = true;
 		_svp._isChangeHistoryIndicatorEnabled = true;
 		_svp._isChangeHistoryEnabled4NextSession = marginIndicator;

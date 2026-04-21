@@ -399,11 +399,11 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 
 	execute(SCI_SETMARGINMASKN, _SC_MARGE_CHANGEHISTORY, (1 << SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN) | (1 << SC_MARKNUM_HISTORY_SAVED) | (1 << SC_MARKNUM_HISTORY_MODIFIED) | (1 << SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED));
 	COLORREF modifiedColor = RGB(255, 128, 0);
-	//COLORREF savedColor = RGB(0, 255, 0);
+	COLORREF savedColor = RGB(0, 255, 0);
 	//COLORREF revertedToModifiedColor = RGB(255, 255, 0);
 	//COLORREF revertedToOriginColor = RGB(0, 0, 255);
 	execute(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_MODIFIED, modifiedColor);
-	//execute(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_SAVED, savedColor);
+	execute(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_SAVED, savedColor);
 	//execute(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED, revertedToModifiedColor);
 	//execute(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN, revertedToOriginColor);
 
@@ -3162,7 +3162,7 @@ void ScintillaEditView::performGlobalStyles()
 	NppParameters& nppParams = NppParameters::getInstance();
 	const ScintillaViewParams& svp = nppParams.getSVP();
 
-	// RE2: extra line spacing for readability
+	// V2: extra line spacing for readability
 	execute(SCI_SETEXTRAASCENT, 2);
 	execute(SCI_SETEXTRADESCENT, 2);
 
@@ -3330,16 +3330,16 @@ void ScintillaEditView::performGlobalStyles()
 	execute(SCI_INDICSETFORE, INDICATOR_HISTORY_SAVED_INSERTION, changeSavedfgColor);
 	execute(SCI_INDICSETFORE, INDICATOR_HISTORY_SAVED_DELETION, changeSavedfgColor);
 
-	// RE2: Git-like change tracking - red box for uncommitted, green box for committed
+	// V2: Git-like change tracking - red box for uncommitted, green box for committed
 	const COLORREF re2UncommittedRed = RGB(255, 64, 64);
-	const COLORREF re2CommittedGreen = RGB(80, 220, 100);
-	execute(SCI_INDICSETSTYLE, INDICATOR_HISTORY_MODIFIED_INSERTION, INDIC_ROUNDBOX);
+	const COLORREF re2CommittedGreen = RGB(0, 255, 0);
+	execute(SCI_INDICSETSTYLE, INDICATOR_HISTORY_MODIFIED_INSERTION, INDIC_STRAIGHTBOX);
 	execute(SCI_INDICSETFORE,  INDICATOR_HISTORY_MODIFIED_INSERTION, re2UncommittedRed);
 	execute(SCI_INDICSETALPHA, INDICATOR_HISTORY_MODIFIED_INSERTION, 80);
 	execute(SCI_INDICSETOUTLINEALPHA, INDICATOR_HISTORY_MODIFIED_INSERTION, 255);
 	execute(SCI_INDICSETSTYLE, INDICATOR_HISTORY_MODIFIED_DELETION, INDIC_STRIKE);
 	execute(SCI_INDICSETFORE,  INDICATOR_HISTORY_MODIFIED_DELETION, re2UncommittedRed);
-	execute(SCI_INDICSETSTYLE, INDICATOR_HISTORY_SAVED_INSERTION, INDIC_ROUNDBOX);
+	execute(SCI_INDICSETSTYLE, INDICATOR_HISTORY_SAVED_INSERTION, INDIC_STRAIGHTBOX);
 	execute(SCI_INDICSETFORE,  INDICATOR_HISTORY_SAVED_INSERTION, re2CommittedGreen);
 	execute(SCI_INDICSETALPHA, INDICATOR_HISTORY_SAVED_INSERTION, 60);
 	execute(SCI_INDICSETOUTLINEALPHA, INDICATOR_HISTORY_SAVED_INSERTION, 255);
@@ -3351,13 +3351,13 @@ void ScintillaEditView::performGlobalStyles()
 	execute(SCI_MARKERSETFORE, SC_MARKNUM_HISTORY_SAVED, re2CommittedGreen);
 	execute(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_SAVED, re2CommittedGreen);
 
-	// RE2: persistent "history touch" indicator (slot 22) - survives restart via sidecar
-	constexpr int RE2_INDIC_HISTORY_TOUCH = 22;
-	execute(SCI_INDICSETSTYLE, RE2_INDIC_HISTORY_TOUCH, INDIC_ROUNDBOX);
-	execute(SCI_INDICSETFORE,  RE2_INDIC_HISTORY_TOUCH, re2CommittedGreen);
-	execute(SCI_INDICSETALPHA, RE2_INDIC_HISTORY_TOUCH, 40);
-	execute(SCI_INDICSETOUTLINEALPHA, RE2_INDIC_HISTORY_TOUCH, 120);
-	execute(SCI_INDICSETUNDER, RE2_INDIC_HISTORY_TOUCH, true);
+	// V2: persistent "history touch" indicator (slot 22) - survives restart via sidecar
+	constexpr int V2_INDIC_HISTORY_TOUCH = 22;
+	execute(SCI_INDICSETSTYLE, V2_INDIC_HISTORY_TOUCH, INDIC_STRAIGHTBOX);
+	execute(SCI_INDICSETFORE,  V2_INDIC_HISTORY_TOUCH, re2CommittedGreen);
+	execute(SCI_INDICSETALPHA, V2_INDIC_HISTORY_TOUCH, 40);
+	execute(SCI_INDICSETOUTLINEALPHA, V2_INDIC_HISTORY_TOUCH, 255);
+	execute(SCI_INDICSETUNDER, V2_INDIC_HISTORY_TOUCH, true);
 
 	COLORREF urlHoveredFG = grey;
 	pStyle = stylers.findByName(L"URL hovered");

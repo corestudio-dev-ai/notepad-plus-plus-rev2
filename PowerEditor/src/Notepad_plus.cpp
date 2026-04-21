@@ -67,7 +67,7 @@ static constexpr ToolBarButtonUnit toolBarIcons[]{
     {IDM_FILE_SAVEALL,                 IDI_SAVEALL_ICON,           IDI_SAVEALL_DISABLE_ICON,      IDI_SAVEALL_ICON2,          IDI_SAVEALL_DISABLE_ICON2,     IDI_SAVEALL_ICON_DM,           IDI_SAVEALL_DISABLE_ICON_DM,      IDI_SAVEALL_ICON_DM2,          IDI_SAVEALL_DISABLE_ICON_DM2,     IDR_SAVEALL},
     {IDM_FILE_CLOSE,                   IDI_CLOSE_ICON,             IDI_CLOSE_ICON,                IDI_CLOSE_ICON2,            IDI_CLOSE_ICON2,               IDI_CLOSE_ICON_DM,             IDI_CLOSE_ICON_DM,                IDI_CLOSE_ICON_DM2,            IDI_CLOSE_ICON_DM2,               IDR_CLOSEFILE},
     {IDM_FILE_CLOSEALL,                IDI_CLOSEALL_ICON,          IDI_CLOSEALL_ICON,             IDI_CLOSEALL_ICON2,         IDI_CLOSEALL_ICON2,            IDI_CLOSEALL_ICON_DM,          IDI_CLOSEALL_ICON_DM,             IDI_CLOSEALL_ICON_DM2,         IDI_CLOSEALL_ICON_DM2,            IDR_CLOSEALL},
-    // RE2: Print button removed
+    // V2: Print button removed
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
@@ -87,7 +87,7 @@ static constexpr ToolBarButtonUnit toolBarIcons[]{
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
-    // RE2: Find/Replace toolbar buttons removed
+    // V2: Find/Replace toolbar buttons removed
     {IDM_VIEW_ZOOMIN,                  IDI_ZOOMIN_ICON,            IDI_ZOOMIN_ICON,               IDI_ZOOMIN_ICON2,           IDI_ZOOMIN_ICON2,              IDI_ZOOMIN_ICON_DM,            IDI_ZOOMIN_ICON_DM,               IDI_ZOOMIN_ICON_DM2,           IDI_ZOOMIN_ICON_DM2,              IDR_ZOOMIN},
     {IDM_VIEW_ZOOMOUT,                 IDI_ZOOMOUT_ICON,           IDI_ZOOMOUT_ICON,              IDI_ZOOMOUT_ICON2,          IDI_ZOOMOUT_ICON2,             IDI_ZOOMOUT_ICON_DM,           IDI_ZOOMOUT_ICON_DM,              IDI_ZOOMOUT_ICON_DM2,          IDI_ZOOMOUT_ICON_DM2,             IDR_ZOOMOUT},
 
@@ -132,6 +132,56 @@ static constexpr ToolBarButtonUnit toolBarIcons[]{
 };
 
 
+
+
+// ===== V2: Accept/Reject changes bar =====
+namespace {
+	struct Re2BarState {
+		bool hoverAccept = false;
+		bool hoverReject = false;
+		bool pressedAccept = false;
+		bool pressedReject = false;
+		bool tracking = false;
+	};
+	static std::map<HWND, Re2BarState> g_re2BarStates;
+	Re2BarState& re2State(HWND h) {
+		return g_re2BarStates[h];
+	}
+	void getButtonRects(HWND hwnd, RECT& rAccept, RECT& rReject) {
+		RECT rc; ::GetClientRect(hwnd, &rc);
+		int cx = (rc.right + rc.left) / 2;
+		int btnW = 260, btnH = 56, gap = 22;
+		int y = (rc.bottom - btnH) / 2;
+		rAccept = { cx - btnW - gap / 2, y, cx - gap / 2, y + btnH };
+		rReject = { cx + gap / 2, y, cx + btnW + gap / 2, y + btnH };
+	}
+	HFONT& re2LabelFont() { static HFONT f = nullptr; return f; }
+	HFONT& re2GlyphFont() { static HFONT f = nullptr; return f; }
+	void ensureRe2Fonts() {
+		if (!re2LabelFont()) {
+			LOGFONTW lf{}; lf.lfHeight = -18; lf.lfWeight = FW_SEMIBOLD;
+			lf.lfCharSet = DEFAULT_CHARSET; lf.lfQuality = CLEARTYPE_QUALITY;
+			wcscpy_s(lf.lfFaceName, L"Segoe UI");
+			re2LabelFont() = ::CreateFontIndirectW(&lf);
+		}
+		if (!re2GlyphFont()) {
+			LOGFONTW lf{}; lf.lfHeight = -22; lf.lfWeight = FW_BOLD;
+			lf.lfCharSet = DEFAULT_CHARSET; lf.lfQuality = CLEARTYPE_QUALITY;
+			wcscpy_s(lf.lfFaceName, L"Segoe UI Symbol");
+			re2GlyphFont() = ::CreateFontIndirectW(&lf);
+		}
+	}
+	bool currentBufferDirty(Notepad_plus* npp) {
+		if (!npp) return false;
+		Buffer* buf = npp->getCurrentBuffer();
+		return buf && buf->isDirty();
+	}
+
+	void re2CleanupFonts() {
+		if (re2LabelFont()) { ::DeleteObject(re2LabelFont()); re2LabelFont() = nullptr; }
+		if (re2GlyphFont()) { ::DeleteObject(re2GlyphFont()); re2GlyphFont() = nullptr; }
+	}
+}
 
 Notepad_plus::Notepad_plus()
 	: _autoCompleteMain(&_mainEditView)
@@ -185,6 +235,7 @@ Notepad_plus::Notepad_plus()
 
 Notepad_plus::~Notepad_plus()
 {
+	re2CleanupFonts();
 	// ATTENTION : the order of the destruction is very important
 	// because if the parent's window handle is destroyed before
 	// the destruction of its children windows' handles,
@@ -451,21 +502,21 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	_statusBar.setPartWidth(STATUSBAR_TYPING_MODE, DPIManagerV2::scale(30, dpi));
 	_statusBar.display(willBeShown);
 
-	// RE2: create Accept/Reject changes bar
+	// V2: create Accept/Reject changes bar
 	{
-		static const wchar_t* kRE2BarClass = L"RE2CommitBar";
+		static const wchar_t* kV2BarClass = L"V2CommitBar";
 		WNDCLASSEX wc = { sizeof(wc) };
-		if (!::GetClassInfoExW(_pPublicInterface->getHinst(), kRE2BarClass, &wc))
+		if (!::GetClassInfoExW(_pPublicInterface->getHinst(), kV2BarClass, &wc))
 		{
 			wc.cbSize = sizeof(wc);
 			wc.lpfnWndProc = Notepad_plus::re2CommitBarProcStatic;
 			wc.hInstance = _pPublicInterface->getHinst();
 			wc.hCursor = ::LoadCursor(nullptr, IDC_HAND);
 			wc.hbrBackground = nullptr;
-			wc.lpszClassName = kRE2BarClass;
+			wc.lpszClassName = kV2BarClass;
 			::RegisterClassExW(&wc);
 		}
-		_re2CommitBar = ::CreateWindowExW(0, kRE2BarClass, L"", WS_CHILD | WS_VISIBLE,
+		_re2CommitBar = ::CreateWindowExW(0, kV2BarClass, L"", WS_CHILD | WS_VISIBLE,
 			0, 0, 10, _re2CommitBarHeight, hwnd, nullptr,
 			_pPublicInterface->getHinst(), this);
 	}
@@ -2463,7 +2514,7 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 
 		msg = stringReplace(msg, L"$STR_REPLACE$", fn);
 
-		// RE2: route through the custom dialog so Commit / Discard wording is visible
+		// V2: route through the custom dialog so Commit / Discard wording is visible
 		DoSaveOrNotBox doSaveOrNotBox;
 		doSaveOrNotBox.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), fn, isMulti);
 		doSaveOrNotBox.doDialog(_nativeLangSpeaker.isRTL());
@@ -5822,6 +5873,7 @@ bool Notepad_plus::switchToFile(BufferID id)
 	{
 		switchEditViewTo(iView);
 		activateBuffer(id, currentView());
+		re2UpdateDirtyState();
 		return true;
 	}
 	return false;
@@ -6825,7 +6877,7 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 	Buffer * buf = MainFileManager.getBufferByID(bufid);
 	buf->increaseRecentTag();
 
-	// RE2: restore persistent marks once per buffer
+	// V2: restore persistent marks once per buffer
 	re2LoadMarksForBuffer(bufid, view);
 
 	if (view == MAIN_VIEW)
@@ -9337,50 +9389,18 @@ void Notepad_plus::changeReadOnlyUserModeForAllOpenedTabs(const bool ro)
 	}
 }
 
-// ===== RE2: Accept/Reject changes bar =====
-namespace {
-	struct Re2BarState {
-		bool hoverAccept = false;
-		bool hoverReject = false;
-		bool pressedAccept = false;
-		bool pressedReject = false;
-		bool tracking = false;
-	};
-	Re2BarState& re2State(HWND h) {
-		static std::map<HWND, Re2BarState> map;
-		return map[h];
-	}
-	void getButtonRects(HWND hwnd, RECT& rAccept, RECT& rReject) {
-		RECT rc; ::GetClientRect(hwnd, &rc);
-		int cx = (rc.right + rc.left) / 2;
-		int btnW = 260, btnH = 56, gap = 22;
-		int y = (rc.bottom - btnH) / 2;
-		rAccept = { cx - btnW - gap / 2, y, cx - gap / 2, y + btnH };
-		rReject = { cx + gap / 2, y, cx + btnW + gap / 2, y + btnH };
-	}
-	HFONT& re2LabelFont() { static HFONT f = nullptr; return f; }
-	HFONT& re2GlyphFont() { static HFONT f = nullptr; return f; }
-	void ensureRe2Fonts() {
-		if (!re2LabelFont()) {
-			LOGFONTW lf{}; lf.lfHeight = -18; lf.lfWeight = FW_SEMIBOLD;
-			lf.lfCharSet = DEFAULT_CHARSET; lf.lfQuality = CLEARTYPE_QUALITY;
-			wcscpy_s(lf.lfFaceName, L"Segoe UI");
-			re2LabelFont() = ::CreateFontIndirectW(&lf);
-		}
-		if (!re2GlyphFont()) {
-			LOGFONTW lf{}; lf.lfHeight = -22; lf.lfWeight = FW_BOLD;
-			lf.lfCharSet = DEFAULT_CHARSET; lf.lfQuality = CLEARTYPE_QUALITY;
-			wcscpy_s(lf.lfFaceName, L"Segoe UI Symbol");
-			re2GlyphFont() = ::CreateFontIndirectW(&lf);
-		}
-	}
-	bool currentBufferDirty(Notepad_plus_Window* win) {
-		if (!win) return false;
-		HWND parent = win->getHSelf();
-		// Ask parent via a no-op — use a simpler proxy: check title suffix " * " is fragile.
-		// Instead, rely on SC_SAVEPOINTREACHED/LEFT tracked through repaint notifications.
-		return ::GetPropW(parent, L"RE2_DIRTY") != nullptr;
-	}
+
+void Notepad_plus::re2UpdateDirtyState()
+{
+	Buffer* buf = _pEditView->getCurrentBuffer();
+	HWND mainWnd = _pPublicInterface->getHSelf();
+	if (buf && buf->isDirty())
+		::SetPropW(mainWnd, L"V2_DIRTY", (HANDLE)1);
+	else
+		::RemovePropW(mainWnd, L"V2_DIRTY");
+
+	if (_re2CommitBar)
+		::InvalidateRect(_re2CommitBar, NULL, TRUE);
 }
 
 LRESULT CALLBACK Notepad_plus::re2CommitBarProcStatic(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -9400,6 +9420,10 @@ LRESULT CALLBACK Notepad_plus::re2CommitBarProcStatic(HWND hwnd, UINT msg, WPARA
 
 LRESULT Notepad_plus::re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	if (msg == WM_DESTROY) {
+		g_re2BarStates.erase(hwnd);
+		return 0;
+	}
 	auto& st = re2State(hwnd);
 	switch (msg)
 	{
@@ -9408,7 +9432,7 @@ LRESULT Notepad_plus::re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
 		case WM_PAINT:
 		{
-			ensureRe2Fonts();
+			bool isDirty = currentBufferDirty(this);
 			PAINTSTRUCT ps;
 			HDC hdcWin = ::BeginPaint(hwnd, &ps);
 			RECT rc; ::GetClientRect(hwnd, &rc);
@@ -9417,6 +9441,8 @@ LRESULT Notepad_plus::re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 			HBITMAP bmp = ::CreateCompatibleBitmap(hdcWin, rc.right, rc.bottom);
 			HGDIOBJ oldBmp = ::SelectObject(hdc, bmp);
 
+			ensureRe2Fonts();
+
 			// Background — vertical gradient from #0B1E32 (top) to #050E1A (bottom)
 			TRIVERTEX v[2] = {
 				{ rc.left,  rc.top,    0x0B00, 0x1E00, 0x3200, 0xFF00 },
@@ -9424,6 +9450,14 @@ LRESULT Notepad_plus::re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 			};
 			GRADIENT_RECT gr = { 0, 1 };
 			::GradientFill(hdc, v, 2, &gr, 1, GRADIENT_FILL_RECT_V);
+
+			if (isDirty) {
+				// Show a subtle "Uncommitted Changes" indicator (vertical orange bar)
+				RECT rInd = { 0, 0, 6, rc.bottom };
+				HBRUSH hbrInd = ::CreateSolidBrush(RGB(255, 120, 0));
+				::FillRect(hdc, &rInd, hbrInd);
+				::DeleteObject(hbrInd);
+			}
 
 			// Top accent line (subtle blue)
 			HPEN pen = ::CreatePen(PS_SOLID, 1, RGB(0x1E, 0x44, 0x75));
@@ -9579,9 +9613,9 @@ void Notepad_plus::re2RepaintCommitBar()
 		::InvalidateRect(_re2CommitBar, nullptr, FALSE);
 }
 
-// ===== RE2: sidecar persistence for change marks (slot 22) =====
+// ===== V2: sidecar persistence for change marks (slot 22) =====
 namespace {
-	constexpr int RE2_INDIC_HISTORY_TOUCH = 22;
+	constexpr int V2_INDIC_HISTORY_TOUCH = 22;
 
 	std::wstring re2HashFileKey(const std::wstring& path) {
 		// Simple FNV-1a 64-bit hash of lowercased path
@@ -9621,7 +9655,7 @@ void Notepad_plus::re2TrackEditMark(intptr_t position, intptr_t length)
 	if (length <= 0) return;
 	ScintillaEditView* view = _pEditView;
 	if (!view) return;
-	view->execute(SCI_SETINDICATORCURRENT, RE2_INDIC_HISTORY_TOUCH);
+	view->execute(SCI_SETINDICATORCURRENT, V2_INDIC_HISTORY_TOUCH);
 	view->execute(SCI_INDICATORFILLRANGE, position, length);
 }
 
@@ -9637,17 +9671,17 @@ void Notepad_plus::re2SaveMarksForCurrentBuffer()
 	// Walk slot 22 to collect filled ranges
 	std::vector<std::pair<intptr_t, intptr_t>> ranges;
 	intptr_t docEnd = view->execute(SCI_GETLENGTH);
-	view->execute(SCI_SETINDICATORCURRENT, RE2_INDIC_HISTORY_TOUCH);
+	view->execute(SCI_SETINDICATORCURRENT, V2_INDIC_HISTORY_TOUCH);
 	intptr_t pos = 0;
 	while (pos < docEnd) {
-		intptr_t val = view->execute(SCI_INDICATORVALUEAT, RE2_INDIC_HISTORY_TOUCH, pos);
+		intptr_t val = view->execute(SCI_INDICATORVALUEAT, V2_INDIC_HISTORY_TOUCH, pos);
 		if (val) {
-			intptr_t end = view->execute(SCI_INDICATOREND, RE2_INDIC_HISTORY_TOUCH, pos);
+			intptr_t end = view->execute(SCI_INDICATOREND, V2_INDIC_HISTORY_TOUCH, pos);
 			if (end <= pos) break;
 			ranges.emplace_back(pos, end);
 			pos = end;
 		} else {
-			intptr_t next = view->execute(SCI_INDICATOREND, RE2_INDIC_HISTORY_TOUCH, pos);
+			intptr_t next = view->execute(SCI_INDICATOREND, V2_INDIC_HISTORY_TOUCH, pos);
 			if (next <= pos) break;
 			pos = next;
 		}
@@ -9656,7 +9690,7 @@ void Notepad_plus::re2SaveMarksForCurrentBuffer()
 	std::wstring sidecar = re2MarksPathFor(path);
 	HANDLE h = ::CreateFileW(sidecar.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_HIDDEN, nullptr);
 	if (h == INVALID_HANDLE_VALUE) return;
-	uint32_t magic = 0x5245324D; // 'RE2M'
+	uint32_t magic = 0x5245324D; // 'V2M'
 	uint32_t count = (uint32_t)ranges.size();
 	DWORD wr = 0;
 	::WriteFile(h, &magic, sizeof(magic), &wr, nullptr);
@@ -9691,14 +9725,22 @@ void Notepad_plus::re2LoadMarksForBuffer(BufferID id, int view)
 
 	ScintillaEditView* editView = (view == MAIN_VIEW) ? &_mainEditView : &_subEditView;
 	intptr_t docLen = editView->execute(SCI_GETLENGTH);
-	editView->execute(SCI_SETINDICATORCURRENT, RE2_INDIC_HISTORY_TOUCH);
+	editView->execute(SCI_SETINDICATORCURRENT, V2_INDIC_HISTORY_TOUCH);
 	for (uint32_t i = 0; i < count; ++i) {
 		uint64_t s = 0, e = 0;
 		::ReadFile(h, &s, sizeof(s), &rd, nullptr);
 		::ReadFile(h, &e, sizeof(e), &rd, nullptr);
 		if (e > (uint64_t)docLen) e = (uint64_t)docLen;
-		if (s < e)
+		if (s < e) {
 			editView->execute(SCI_INDICATORFILLRANGE, (intptr_t)s, (intptr_t)(e - s));
+			
+			// V2: Also add the green bar (SC_MARKNUM_HISTORY_SAVED) to the Change History margin
+			intptr_t startLine = editView->execute(SCI_LINEFROMPOSITION, (intptr_t)s);
+			intptr_t endLine = editView->execute(SCI_LINEFROMPOSITION, (intptr_t)e);
+			for (intptr_t line = startLine; line <= endLine; ++line) {
+				editView->execute(SCI_MARKERADD, line, SC_MARKNUM_HISTORY_SAVED);
+			}
+		}
 	}
 	::CloseHandle(h);
 }
