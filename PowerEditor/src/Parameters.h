@@ -640,7 +640,7 @@ public:
 
 public:
 	std::vector<std::pair<char, char>> _matchedPairs;
-	bool _doHtmlXmlTag = false;
+	bool _doHtmlXmlTag = true;
 	bool _doParentheses = false;
 	bool _doBrackets = false;
 	bool _doCurlyBrackets = false;
@@ -680,7 +680,7 @@ struct AdvancedOptions final
 
 struct DarkModeConf final
 {
-	bool _isEnabled = false;
+	bool _isEnabled = true;
 	bool _isEnabledPlugin = true;
 	NppDarkMode::ColorTone _colorTone = NppDarkMode::ColorTone::blackTone;
 	NppDarkMode::Colors _customColors = NppDarkMode::getDarkModeDefaultColors();
@@ -883,8 +883,8 @@ struct ScintillaViewParams
 	bool _bookMarkMarginShow = true;
 	
 	bool _isChangeHistoryMarginEnabled = true;
-	bool _isChangeHistoryIndicatorEnabled = false;
-	changeHistoryState _isChangeHistoryEnabled4NextSession = changeHistoryState::margin; // no -> 0 (disable), yes -> 1 (margin), yes ->2 (indicator), yes-> 3 (margin + indicator)
+	bool _isChangeHistoryIndicatorEnabled = true; // V2: Git-like red/green tracking always on
+	changeHistoryState _isChangeHistoryEnabled4NextSession = changeHistoryState::marginIndicator; // no -> 0 (disable), yes -> 1 (margin), yes ->2 (indicator), yes-> 3 (margin + indicator)
 
 	folderStyle _folderStyle = folderStyle::FOLDER_STYLE_BOX; //"simple", "arrow", "circle", "box" and "none"
 	lineWrapMethod _lineWrapMethod = lineWrapMethod::LINEWRAP_ALIGNED;

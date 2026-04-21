@@ -125,6 +125,8 @@ Translation note:
 					<Item id="42084" name="Date Time (short)"/>
 					<Item id="42085" name="Date Time (long)"/>
 					<Item id="42086" name="Date Time (customized)"/>
+					<Item id="42107" name="Suggested CSS"/>
+					<Item id="42108" name="Suggested JavaScript"/>
 					<Item id="42008" name="Increase Line Indent"/>
 					<Item id="42009" name="Decrease Line Indent"/>
 					<Item id="42010" name="Duplicate Current Line"/>

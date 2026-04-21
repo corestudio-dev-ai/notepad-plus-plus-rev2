@@ -278,6 +278,17 @@ public:
 
 	void changeReadOnlyUserModeForAllOpenedTabs(const bool ro);
 
+	// V2: commit bar (bottom-center Accept/Reject buttons)
+	static LRESULT CALLBACK re2CommitBarProcStatic(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	LRESULT re2CommitBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	void re2RepaintCommitBar();
+	void re2UpdateDirtyState();
+
+	// V2: persistent change marks (sidecar-backed slot 22 indicator)
+	void re2TrackEditMark(intptr_t position, intptr_t length); // call from SCN_MODIFIED user edits
+	void re2SaveMarksForCurrentBuffer();                        // call from SCN_SAVEPOINTREACHED
+	void re2LoadMarksForBuffer(BufferID id, int view);          // call from notifyBufferActivated (once)
+
 private:
 	Notepad_plus_Window* _pPublicInterface = nullptr;
     Window* _pMainWindow = nullptr;
@@ -313,6 +324,10 @@ private:
     StatusBar _statusBar;
 	ReBar _rebarTop;
 	ReBar _rebarBottom;
+
+	// V2 Accept/Reject changes bar (bottom center, above status bar)
+	HWND _re2CommitBar = nullptr;
+	int _re2CommitBarHeight = 84;
 
 	// Dialog
 	FindReplaceDlg _findReplaceDlg;
@@ -672,4 +687,5 @@ private:
 	int getIcoID(DockingDlgInterface* panel);
 	void loadPanelIcon(HINSTANCE hInst, DockingDlgInterface* panel, HICON* phIcon);
 	void refreshPanelIcon(HINSTANCE hInst, DockingDlgInterface* panel);
+
 };

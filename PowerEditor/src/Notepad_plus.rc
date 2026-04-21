@@ -455,11 +455,11 @@ BEGIN
         END
         MENUITEM "Open in &Default Viewer",          IDM_FILE_OPEN_DEFAULT_VIEWER
         MENUITEM "Open Folder as &Workspace...",     IDM_FILE_OPENFOLDERASWORKSPACE
-        MENUITEM "Re&load from Disk",                IDM_FILE_RELOAD
-        MENUITEM "&Save",                            IDM_FILE_SAVE
-        MENUITEM "Save &As...",                      IDM_FILE_SAVEAS
-        MENUITEM "Save a Cop&y As...",               IDM_FILE_SAVECOPYAS
-        MENUITEM "Sa&ve All",                        IDM_FILE_SAVEALL
+        MENUITEM "Re&ject Changes (reload from disk)",  IDM_FILE_RELOAD
+        MENUITEM "&Commit Changes",                  IDM_FILE_SAVE
+        MENUITEM "Commit &As...",                    IDM_FILE_SAVEAS
+        MENUITEM "Commit a Cop&y As...",             IDM_FILE_SAVECOPYAS
+        MENUITEM "Co&mmit All",                      IDM_FILE_SAVEALL
         MENUITEM "&Rename...",                       IDM_FILE_RENAME
         MENUITEM "&Close",                           IDM_FILE_CLOSE
         MENUITEM "Clos&e All",                       IDM_FILE_CLOSEALL
@@ -476,8 +476,10 @@ BEGIN
         MENUITEM "Load Sess&ion...",                 IDM_FILE_LOADSESSION
         MENUITEM "Save Sess&ion...",                 IDM_FILE_SAVESESSION
         MENUITEM SEPARATOR
-        MENUITEM "&Print...",                        IDM_FILE_PRINT
-        MENUITEM "Print No&w",                       IDM_FILE_PRINTNOW
+        POPUP "Settings"
+        BEGIN
+            MENUITEM "Style Configurator...",        IDM_LANGSTYLE_CONFIG_DLG
+        END
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                            IDM_FILE_EXIT
     END
@@ -500,6 +502,9 @@ BEGIN
                 MENUITEM "Date Time (short)",        IDM_EDIT_INSERT_DATETIME_SHORT
                 MENUITEM "Date Time (long)",         IDM_EDIT_INSERT_DATETIME_LONG
                 MENUITEM "Date Time (customized)",   IDM_EDIT_INSERT_DATETIME_CUSTOMIZED
+                MENUITEM SEPARATOR
+                MENUITEM "Suggested CSS",            IDM_EDIT_INSERT_SUGGESTED_CSS
+                MENUITEM "Suggested JavaScript",     IDM_EDIT_INSERT_SUGGESTED_JS
         END
         POPUP "Cop&y to Clipboard"
         BEGIN
@@ -644,85 +649,17 @@ BEGIN
         MENUITEM "Read-Only Attribute in Windows",    IDM_EDIT_TOGGLESYSTEMREADONLY
     END
 
-    POPUP "&Search"
+    POPUP "&Navigate"
     BEGIN
-        MENUITEM "&Find...",                    IDM_SEARCH_FIND
-        MENUITEM "Find in Fi&les...",           IDM_SEARCH_FINDINFILES
-        MENUITEM "Find &Next",                  IDM_SEARCH_FINDNEXT
-        MENUITEM "Find &Previous",              IDM_SEARCH_FINDPREV
-        MENUITEM "&Select and Find Next",       IDM_SEARCH_SETANDFINDNEXT
-        MENUITEM "&Select and Find Previous",   IDM_SEARCH_SETANDFINDPREV
-        MENUITEM "Find (&Volatile) Next",       IDM_SEARCH_VOLATILE_FINDNEXT
-        MENUITEM "Find (&Volatile) Previous",   IDM_SEARCH_VOLATILE_FINDPREV
-        MENUITEM "&Replace...",                 IDM_SEARCH_REPLACE
-        MENUITEM "&Incremental Search",         IDM_SEARCH_FINDINCREMENT
-        MENUITEM "Search Results &Window",      IDM_FOCUS_ON_FOUND_RESULTS
-        MENUITEM "Next Search Resul&t",         IDM_SEARCH_GOTONEXTFOUND
-        MENUITEM "Previous Search Resul&t",     IDM_SEARCH_GOTOPREVFOUND
         MENUITEM "&Go to...",                   IDM_SEARCH_GOTOLINE
         MENUITEM "Go to &Matching Brace",       IDM_SEARCH_GOTOMATCHINGBRACE
         MENUITEM "Select All In-betw&een {} [] or ()", IDM_SEARCH_SELECTMATCHINGBRACES
-        MENUITEM "Mar&k...",                    IDM_SEARCH_MARK
         MENUITEM SEPARATOR
-        POPUP "Change History"
+        POPUP "&Change History"
         BEGIN
             MENUITEM "Go to Next Change",           IDM_SEARCH_CHANGED_NEXT
             MENUITEM "Go to Previous Change",       IDM_SEARCH_CHANGED_PREV
             MENUITEM "Clear Change History",        IDM_SEARCH_CLEAR_CHANGE_HISTORY
-        END
-        MENUITEM SEPARATOR
-        POPUP "Style &All Occurrences of Token"
-        BEGIN
-            MENUITEM "Using 1st Style",    IDM_SEARCH_MARKALLEXT1
-            MENUITEM "Using 2nd Style",    IDM_SEARCH_MARKALLEXT2
-            MENUITEM "Using 3rd Style",    IDM_SEARCH_MARKALLEXT3
-            MENUITEM "Using 4th Style",    IDM_SEARCH_MARKALLEXT4
-            MENUITEM "Using 5th Style",    IDM_SEARCH_MARKALLEXT5
-        END
-        POPUP "Style &One Token"
-        BEGIN
-            MENUITEM "Using 1st Style",    IDM_SEARCH_MARKONEEXT1
-            MENUITEM "Using 2nd Style",    IDM_SEARCH_MARKONEEXT2
-            MENUITEM "Using 3rd Style",    IDM_SEARCH_MARKONEEXT3
-            MENUITEM "Using 4th Style",    IDM_SEARCH_MARKONEEXT4
-            MENUITEM "Using 5th Style",    IDM_SEARCH_MARKONEEXT5
-        END
-        POPUP "Clear Style"
-        BEGIN
-            MENUITEM "Clear 1st Style",     IDM_SEARCH_UNMARKALLEXT1
-            MENUITEM "Clear 2nd Style",     IDM_SEARCH_UNMARKALLEXT2
-            MENUITEM "Clear 3rd Style",     IDM_SEARCH_UNMARKALLEXT3
-            MENUITEM "Clear 4th Style",     IDM_SEARCH_UNMARKALLEXT4
-            MENUITEM "Clear 5th Style",     IDM_SEARCH_UNMARKALLEXT5
-            MENUITEM "Clear all Styles",    IDM_SEARCH_CLEARALLMARKS
-        END
-        POPUP "&Jump Up"
-        BEGIN
-            MENUITEM "1st Style",     IDM_SEARCH_GOPREVMARKER1
-            MENUITEM "2nd Style",     IDM_SEARCH_GOPREVMARKER2
-            MENUITEM "3rd Style",     IDM_SEARCH_GOPREVMARKER3
-            MENUITEM "4th Style",     IDM_SEARCH_GOPREVMARKER4
-            MENUITEM "5th Style",     IDM_SEARCH_GOPREVMARKER5
-            MENUITEM "Find Mark Style",    IDM_SEARCH_GOPREVMARKER_DEF
-        END
-        POPUP "Jump &Down"
-        BEGIN
-            MENUITEM "1st Style",      IDM_SEARCH_GONEXTMARKER1
-            MENUITEM "2nd Style",      IDM_SEARCH_GONEXTMARKER2
-            MENUITEM "3rd Style",      IDM_SEARCH_GONEXTMARKER3
-            MENUITEM "4th Style",      IDM_SEARCH_GONEXTMARKER4
-            MENUITEM "5th Style",      IDM_SEARCH_GONEXTMARKER5
-            MENUITEM "Find Mark Style",     IDM_SEARCH_GONEXTMARKER_DEF
-        END
-        POPUP "&Copy Styled Text"
-        BEGIN
-            MENUITEM "1st Style",               IDM_SEARCH_STYLE1TOCLIP
-            MENUITEM "2nd Style",               IDM_SEARCH_STYLE2TOCLIP
-            MENUITEM "3rd Style",               IDM_SEARCH_STYLE3TOCLIP
-            MENUITEM "4th Style",               IDM_SEARCH_STYLE4TOCLIP
-            MENUITEM "5th Style",               IDM_SEARCH_STYLE5TOCLIP
-            MENUITEM "All Styles",              IDM_SEARCH_ALLSTYLESTOCLIP
-            MENUITEM "Find Mark Style",     IDM_SEARCH_MARKEDTOCLIP
         END
         MENUITEM SEPARATOR
         POPUP "&Bookmark"
@@ -731,15 +668,7 @@ BEGIN
             MENUITEM "Next Bookmark",                          IDM_SEARCH_NEXT_BOOKMARK
             MENUITEM "Previous Bookmark",                      IDM_SEARCH_PREV_BOOKMARK
             MENUITEM "Clear All Bookmarks",                    IDM_SEARCH_CLEAR_BOOKMARKS
-            MENUITEM "Cut Bookmarked Lines",                   IDM_SEARCH_CUTMARKEDLINES
-            MENUITEM "Copy Bookmarked Lines",                  IDM_SEARCH_COPYMARKEDLINES
-            MENUITEM "Paste to (Replace) Bookmarked Lines",    IDM_SEARCH_PASTEMARKEDLINES
-            MENUITEM "Remove Bookmarked Lines",                IDM_SEARCH_DELETEMARKEDLINES
-            MENUITEM "Remove Non-Bookmarked Lines",            IDM_SEARCH_DELETEUNMARKEDLINES
-            MENUITEM "Inverse Bookmarks",                      IDM_SEARCH_INVERSEMARKS
         END
-        MENUITEM SEPARATOR
-        MENUITEM "Find characters in rang&e...",       IDM_SEARCH_FINDCHARINRANGE
     END
 
     POPUP "&View"
@@ -866,131 +795,6 @@ BEGIN
         MENUITEM "Monito&ring (tail -f)",  	IDM_VIEW_MONITORING
     END
 
-    POPUP "E&ncoding"
-    BEGIN
-        MENUITEM "ANSI",                    IDM_FORMAT_ANSI
-        MENUITEM "UTF-8",                   IDM_FORMAT_AS_UTF_8
-        MENUITEM "UTF-8-BOM",               IDM_FORMAT_UTF_8
-        MENUITEM "UTF-16 BE BOM",           IDM_FORMAT_UTF_16BE
-        MENUITEM "UTF-16 LE BOM",           IDM_FORMAT_UTF_16LE
-        POPUP "Character sets"
-        BEGIN
-            POPUP "Arabic"
-            BEGIN
-                MENUITEM "ISO 8859-6",          IDM_FORMAT_ISO_8859_6
-                MENUITEM "OEM 720",             IDM_FORMAT_DOS_720
-                MENUITEM "Windows-1256",        IDM_FORMAT_WIN_1256
-            END
-
-            POPUP "Baltic"
-            BEGIN
-                MENUITEM "ISO 8859-4",          IDM_FORMAT_ISO_8859_4
-                MENUITEM "ISO 8859-13",         IDM_FORMAT_ISO_8859_13
-                MENUITEM "OEM 775",             IDM_FORMAT_DOS_775
-                MENUITEM "Windows-1257",        IDM_FORMAT_WIN_1257
-            END
-            POPUP "Celtic"
-            BEGIN
-                MENUITEM "ISO 8859-14",         IDM_FORMAT_ISO_8859_14
-            END
-            POPUP "Cyrillic"
-            BEGIN
-                MENUITEM "ISO 8859-5",          IDM_FORMAT_ISO_8859_5
-                MENUITEM "KOI8-R",              IDM_FORMAT_KOI8R_CYRILLIC
-                MENUITEM "KOI8-U",              IDM_FORMAT_KOI8U_CYRILLIC
-                MENUITEM "Macintosh",           IDM_FORMAT_MAC_CYRILLIC
-                MENUITEM "OEM 855",             IDM_FORMAT_DOS_855
-                MENUITEM "OEM 866",             IDM_FORMAT_DOS_866
-                MENUITEM "Windows-1251",        IDM_FORMAT_WIN_1251
-            END
-
-            POPUP "Central European"
-            BEGIN
-                MENUITEM "OEM 852",             IDM_FORMAT_DOS_852
-                MENUITEM "Windows-1250",        IDM_FORMAT_WIN_1250
-            END
-
-            POPUP "Chinese"
-            BEGIN
-                MENUITEM "Big5 (Traditional)",  IDM_FORMAT_BIG5
-                MENUITEM "GB2312 (Simplified)", IDM_FORMAT_GB2312
-            END
-
-            POPUP "Eastern European"
-            BEGIN
-                MENUITEM "ISO 8859-2",          IDM_FORMAT_ISO_8859_2
-            END
-
-            POPUP "Greek"
-            BEGIN
-                MENUITEM "ISO 8859-7",          IDM_FORMAT_ISO_8859_7
-                MENUITEM "OEM 737",             IDM_FORMAT_DOS_737
-                MENUITEM "OEM 869",             IDM_FORMAT_DOS_869
-                MENUITEM "Windows-1253",        IDM_FORMAT_WIN_1253
-            END
-
-            POPUP "Hebrew"
-            BEGIN
-                MENUITEM "ISO 8859-8",          IDM_FORMAT_ISO_8859_8
-                MENUITEM "OEM 862",             IDM_FORMAT_DOS_862
-                MENUITEM "Windows-1255",        IDM_FORMAT_WIN_1255
-            END
-
-            POPUP "Japanese"
-            BEGIN
-                MENUITEM "Shift-JIS",           IDM_FORMAT_SHIFT_JIS
-            END
-
-            POPUP "Korean"
-            BEGIN
-                MENUITEM "Windows 949",              IDM_FORMAT_KOREAN_WIN
-                MENUITEM "EUC-KR",              IDM_FORMAT_EUC_KR
-            END
-
-            POPUP "North European"
-            BEGIN
-                MENUITEM "OEM 861 : Icelandic",   IDM_FORMAT_DOS_861
-                MENUITEM "OEM 865 : Nordic",   IDM_FORMAT_DOS_865
-            END
-
-            POPUP "Thai"
-            BEGIN
-                MENUITEM "TIS-620",                 IDM_FORMAT_TIS_620
-            END
-
-            POPUP "Turkish"
-            BEGIN
-                MENUITEM "ISO 8859-3",          IDM_FORMAT_ISO_8859_3
-                MENUITEM "ISO 8859-9",          IDM_FORMAT_ISO_8859_9
-                MENUITEM "OEM 857",             IDM_FORMAT_DOS_857
-                MENUITEM "Windows-1254",        IDM_FORMAT_WIN_1254
-            END
-
-            POPUP "Western European"
-            BEGIN
-                MENUITEM "ISO 8859-1",          IDM_FORMAT_ISO_8859_1
-                //MENUITEM "ISO 8859-10",         IDM_FORMAT_ISO_8859_10
-                MENUITEM "ISO 8859-15",         IDM_FORMAT_ISO_8859_15
-                MENUITEM "OEM 850",             IDM_FORMAT_DOS_850
-                MENUITEM "OEM 858",             IDM_FORMAT_DOS_858
-                MENUITEM "OEM 860 : Portuguese",  IDM_FORMAT_DOS_860
-                MENUITEM "OEM 863 : French",      IDM_FORMAT_DOS_863
-                MENUITEM "OEM-US",              IDM_FORMAT_DOS_437
-                MENUITEM "Windows-1252",        IDM_FORMAT_WIN_1252
-            END
-
-            POPUP "Vietnamese"
-            BEGIN
-                MENUITEM "Windows-1258",        IDM_FORMAT_WIN_1258
-            END
-        END
-        MENUITEM SEPARATOR
-        MENUITEM "Convert to ANSI",            IDM_FORMAT_CONV2_ANSI
-        MENUITEM "Convert to UTF-8",           IDM_FORMAT_CONV2_AS_UTF_8
-        MENUITEM "Convert to UTF-8-BOM",       IDM_FORMAT_CONV2_UTF_8
-        MENUITEM "Convert to UTF-16 BE BOM",   IDM_FORMAT_CONV2_UTF_16BE
-        MENUITEM "Convert to UTF-16 LE BOM",   IDM_FORMAT_CONV2_UTF_16LE
-    END
 
     POPUP "&Language"
     BEGIN
@@ -1259,7 +1063,6 @@ BEGIN
     POPUP "Se&ttings"
     BEGIN
         MENUITEM "Preferences...",          IDM_SETTING_PREFERENCE
-        MENUITEM "Style Configurator...",   IDM_LANGSTYLE_CONFIG_DLG
         MENUITEM "Shortcut Mapper...",      IDM_SETTING_SHORTCUT_MAPPER
         MENUITEM SEPARATOR
         POPUP "Import"
@@ -1371,7 +1174,6 @@ BEGIN
         MENUITEM "New",                 IDM_SYSTRAYPOPUP_NEWDOC
         MENUITEM "New and Paste",       IDM_SYSTRAYPOPUP_NEW_AND_PASTE
         MENUITEM "Open...",             IDM_SYSTRAYPOPUP_OPENFILE
-        MENUITEM "Find in Files...",    IDM_SEARCH_FINDINFILES
         MENUITEM SEPARATOR
         MENUITEM "Close Tray Icon",     IDM_SYSTRAYPOPUP_CLOSE
     END
@@ -1432,30 +1234,30 @@ BEGIN
     DEFPUSHBUTTON   "OK",IDOK,185,360,50,14
 END
 
-IDD_DOSAVEORNOTBOX DIALOGEX 0, 0, 312, 80
+IDD_DOSAVEORNOTBOX DIALOGEX 0, 0, 420, 80
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE
-CAPTION "Save"
+CAPTION "Uncommitted changes"
 FONT 8, L"MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    LTEXT           "",IDC_DOSAVEORNOTTEXT,7,10,290,40,SS_EDITCONTROL
-    DEFPUSHBUTTON   "&Yes",IDYES,10,60,50,14
-    PUSHBUTTON      "&No",IDNO,63,60,50,14
-    PUSHBUTTON      "&Cancel",IDCANCEL,116,60,60,14
-    PUSHBUTTON      "Yes to &all",IDRETRY,179,60,60,14
-    PUSHBUTTON      "N&o to all",IDIGNORE,242,60,60,14
+    LTEXT           "",IDC_DOSAVEORNOTTEXT,7,10,400,40,SS_EDITCONTROL
+    DEFPUSHBUTTON   "&Commit changes",IDYES,7,60,90,14
+    PUSHBUTTON      "&Discard uncommitted",IDNO,100,60,100,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,203,60,50,14
+    PUSHBUTTON      "Commit &all",IDRETRY,256,60,70,14
+    PUSHBUTTON      "Discard a&ll",IDIGNORE,329,60,80,14
 END
 
-IDD_DOSAVEALLBOX DIALOGEX 0, 0, 260, 95
+IDD_DOSAVEALLBOX DIALOGEX 0, 0, 340, 95
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE
-CAPTION "Save"
+CAPTION "Uncommitted changes"
 FONT 8, L"MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    LTEXT           "",IDC_DOSAVEALLTEXT,7,10,250,70,SS_EDITCONTROL
-    DEFPUSHBUTTON   "&Yes",IDYES,47,75,50,14
-    PUSHBUTTON      "&Always yes",IDRETRY,100,75,60,14
-    PUSHBUTTON      "&No",IDNO,163,75,50,14
+    LTEXT           "",IDC_DOSAVEALLTEXT,7,10,326,55,SS_EDITCONTROL
+    DEFPUSHBUTTON   "&Commit changes",IDYES,30,75,90,14
+    PUSHBUTTON      "&Always commit",IDRETRY,123,75,90,14
+    PUSHBUTTON      "&Discard uncommitted",IDNO,216,75,100,14
 END
 
 IDD_GOLINE DIALOGEX 0, 0, 258, 75
@@ -1484,4 +1286,13 @@ STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     PUSHBUTTON      "+",IDC_RESTORE_BUTTON,0,0,12,10
+END
+
+// V2 Start Center dialog: fully owner-painted. Client area resized in WM_INITDIALOG.
+#define IDD_V2_STARTCENTER 27000
+IDD_V2_STARTCENTER DIALOGEX 0, 0, 400, 260
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Notepad++ V2"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
 END

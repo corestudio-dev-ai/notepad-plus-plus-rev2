@@ -326,7 +326,8 @@ intptr_t CALLBACK PreferenceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			_wVector.push_back(DlgInfo(&_printSubDlg, L"Print", L"Print"));
 			_wVector.push_back(DlgInfo(&_searchingSubDlg, L"Searching", L"Searching"));
 			_wVector.push_back(DlgInfo(&_backupSubDlg, L"Backup", L"Backup"));
-			_wVector.push_back(DlgInfo(&_autoCompletionSubDlg, L"Auto-Completion", L"AutoCompletion"));
+			// V2: Auto-completion is always on — settings panel removed
+			// _wVector.push_back(DlgInfo(&_autoCompletionSubDlg, L"Auto-Completion", L"AutoCompletion"));
 			_wVector.push_back(DlgInfo(&_multiInstanceSubDlg, L"Multi-Instance & Date", L"MultiInstance"));
 			_wVector.push_back(DlgInfo(&_delimiterSubDlg, L"Delimiter", L"Delimiter"));
 			_wVector.push_back(DlgInfo(&_performanceSubDlg, L"Performance", L"Performance"));

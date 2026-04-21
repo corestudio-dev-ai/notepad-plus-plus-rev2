@@ -825,7 +825,7 @@ void DoSaveOrNotBox::doDialog(bool isRTL)
 void DoSaveOrNotBox::changeLang()
 {
 	wstring msg;
-	wstring defaultMessage = L"Save file \"$STR_REPLACE$\" ?";
+	wstring defaultMessage = L"\"$STR_REPLACE$\" has uncommitted changes.\r\nCommit changes now or discard them?";
 	NativeLangSpeaker* nativeLangSpeaker = NppParameters::getInstance().getNativeLangSpeaker();
 
 	if (nativeLangSpeaker->changeDlgLang(_hSelf, "DoSaveOrNot"))

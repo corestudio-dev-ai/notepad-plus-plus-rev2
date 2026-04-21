@@ -16,7 +16,12 @@
 
 
 #include <shlwapi.h>
+#include <commctrl.h>
+#include <shobjidl.h>
+#include <windowsx.h>
+#include <fstream>
 #include "Notepad_plus_Window.h"
+#include "menuCmdID.h"
 
 HWND Notepad_plus_Window::gNppHWND = NULL;
 
@@ -61,6 +66,413 @@ void Notepad_plus_Window::setStartupBgColor(COLORREF BgColor)
 }
 
 
+// ===== V2 Start Center: owner-painted tile dialog =====
+namespace re2 {
+
+constexpr int IDD_V2_STARTCENTER = 27000;
+constexpr int kTileCount = 3;
+constexpr int kDialogW = 720;
+constexpr int kDialogH = 480;
+constexpr int kRailW = 200;
+constexpr int kTileTop = 80;
+constexpr int kTileH = 320;
+constexpr int kTilePad = 20;
+
+constexpr COLORREF BG        = RGB(0x07, 0x15, 0x24);
+constexpr COLORREF RAIL      = RGB(0x00, 0x0C, 0x18);
+constexpr COLORREF TILE_BG   = RGB(0x0B, 0x1E, 0x32);
+constexpr COLORREF TILE_HOV  = RGB(0x18, 0x38, 0x5F);
+constexpr COLORREF ACCENT    = RGB(0x66, 0x88, 0xCC);
+constexpr COLORREF TEXT_HI   = RGB(0xE6, 0xEE, 0xF8);
+constexpr COLORREF TEXT_LO   = RGB(0x88, 0xA0, 0xC0);
+
+struct TileSpec {
+	int id;
+	const wchar_t* title;
+	const wchar_t* desc;
+	int iconKind; // 0=page 1=brackets 2=folder
+};
+
+static const TileSpec kTiles[kTileCount] = {
+	{ 1001, L"Blank Document",  L"Start with an empty file.",                              0 },
+	{ 1002, L"Blank HTML",      L"New file pre-filled with HTML5 boilerplate.",            1 },
+	{ 1003, L"Web Project",     L"Creates index.html, style.css, script.js in a folder.",  2 },
+};
+
+struct DlgState {
+	int hoveredTile = -1;
+	bool tracking = false;
+};
+
+static RECT getTileRect(int i)
+{
+	int avail = kDialogW - kRailW - kTilePad * (kTileCount + 1);
+	int tileW = avail / kTileCount;
+	RECT r{};
+	r.left = kRailW + kTilePad + i * (tileW + kTilePad);
+	r.top = kTileTop;
+	r.right = r.left + tileW;
+	r.bottom = r.top + kTileH;
+	return r;
+}
+
+static int hitTestTile(int x, int y)
+{
+	POINT p{ x, y };
+	for (int i = 0; i < kTileCount; ++i)
+	{
+		RECT r = getTileRect(i);
+		if (PtInRect(&r, p)) return i;
+	}
+	return -1;
+}
+
+static void drawIcon(HDC hdc, int kind, int cx, int cy)
+{
+	HPEN pen = CreatePen(PS_SOLID, 3, ACCENT);
+	HPEN old = (HPEN)SelectObject(hdc, pen);
+	HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
+	HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
+	SetBkMode(hdc, TRANSPARENT);
+
+	switch (kind)
+	{
+		case 0: // page: rounded rect + a few lines
+			RoundRect(hdc, cx - 28, cy - 36, cx + 28, cy + 36, 8, 8);
+			{
+				HPEN line = CreatePen(PS_SOLID, 2, TEXT_LO);
+				SelectObject(hdc, line);
+				for (int i = 0; i < 4; ++i)
+				{
+					int y = cy - 20 + i * 12;
+					MoveToEx(hdc, cx - 18, y, nullptr);
+					LineTo(hdc, cx + 18, y);
+				}
+				SelectObject(hdc, pen);
+				DeleteObject(line);
+			}
+			break;
+		case 1: // </> brackets
+			{
+				SetTextColor(hdc, ACCENT);
+				HFONT font = CreateFontW(56, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+					DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+					CLEARTYPE_QUALITY, FF_DONTCARE, L"Cascadia Code");
+				HFONT oldF = (HFONT)SelectObject(hdc, font);
+				RECT r{ cx - 60, cy - 30, cx + 60, cy + 30 };
+				DrawTextW(hdc, L"</>", -1, &r, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+				SelectObject(hdc, oldF);
+				DeleteObject(font);
+			}
+			break;
+		case 2: // folder + 3 colored dots for HTML/CSS/JS
+			{
+				RECT f{ cx - 36, cy - 20, cx + 36, cy + 24 };
+				Rectangle(hdc, f.left, f.top, f.right, f.bottom);
+				// tab
+				Rectangle(hdc, f.left + 4, f.top - 6, f.left + 24, f.top + 2);
+				DeleteObject(pen);
+				HBRUSH html = CreateSolidBrush(RGB(0xE3, 0x4C, 0x26));
+				HBRUSH css  = CreateSolidBrush(RGB(0x26, 0x3E, 0xE3));
+				HBRUSH js   = CreateSolidBrush(RGB(0xF7, 0xDF, 0x1E));
+				HBRUSH oldB = (HBRUSH)SelectObject(hdc, html);
+				pen = CreatePen(PS_NULL, 0, 0);
+				HPEN oldP = (HPEN)SelectObject(hdc, pen);
+				Ellipse(hdc, cx - 22, cy + 32, cx - 10, cy + 44);
+				SelectObject(hdc, css);  Ellipse(hdc, cx - 6,  cy + 32, cx + 6,  cy + 44);
+				SelectObject(hdc, js);   Ellipse(hdc, cx + 10, cy + 32, cx + 22, cy + 44);
+				SelectObject(hdc, oldB); SelectObject(hdc, oldP);
+				DeleteObject(html); DeleteObject(css); DeleteObject(js);
+			}
+			break;
+	}
+
+	SelectObject(hdc, old);
+	SelectObject(hdc, oldBrush);
+	DeleteObject(pen);
+}
+
+static void paintDialog(HWND hDlg, const DlgState& state)
+{
+	PAINTSTRUCT ps;
+	HDC hdcScreen = BeginPaint(hDlg, &ps);
+	RECT rc;
+	GetClientRect(hDlg, &rc);
+
+	// double buffer
+	HDC hdc = CreateCompatibleDC(hdcScreen);
+	HBITMAP bmp = CreateCompatibleBitmap(hdcScreen, rc.right, rc.bottom);
+	HBITMAP oldBmp = (HBITMAP)SelectObject(hdc, bmp);
+
+	// background
+	HBRUSH bgBrush = CreateSolidBrush(BG);
+	FillRect(hdc, &rc, bgBrush);
+	DeleteObject(bgBrush);
+
+	// left rail
+	RECT railRc{ 0, 0, kRailW, rc.bottom };
+	HBRUSH railBrush = CreateSolidBrush(RAIL);
+	FillRect(hdc, &railRc, railBrush);
+	DeleteObject(railBrush);
+
+	SetBkMode(hdc, TRANSPARENT);
+
+	// Title in rail
+	{
+		HFONT titleFont = CreateFontW(28, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+			CLEARTYPE_QUALITY, FF_DONTCARE, L"Segoe UI");
+		HFONT oldF = (HFONT)SelectObject(hdc, titleFont);
+		SetTextColor(hdc, TEXT_HI);
+		RECT tRc{ 24, 48, kRailW - 16, 90 };
+		DrawTextW(hdc, L"Notepad++", -1, &tRc, DT_LEFT | DT_SINGLELINE);
+		tRc.top += 30; tRc.bottom += 30;
+		SetTextColor(hdc, ACCENT);
+		DrawTextW(hdc, L"V2", -1, &tRc, DT_LEFT | DT_SINGLELINE);
+		SelectObject(hdc, oldF);
+		DeleteObject(titleFont);
+	}
+	// Subtitle
+	{
+		HFONT subFont = CreateFontW(15, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+			CLEARTYPE_QUALITY, FF_DONTCARE, L"Segoe UI");
+		HFONT oldF = (HFONT)SelectObject(hdc, subFont);
+		SetTextColor(hdc, TEXT_LO);
+		RECT sRc{ 24, 132, kRailW - 16, 160 };
+		DrawTextW(hdc, L"dark. minimal. yours.", -1, &sRc, DT_LEFT | DT_SINGLELINE);
+
+		// Footer
+		RECT fRc{ 24, rc.bottom - 40, kRailW - 16, rc.bottom - 16 };
+		SetTextColor(hdc, TEXT_LO);
+		DrawTextW(hdc, L"Press Esc to skip.", -1, &fRc, DT_LEFT | DT_SINGLELINE);
+
+		SelectObject(hdc, oldF);
+		DeleteObject(subFont);
+	}
+
+	// "New" header
+	{
+		HFONT hFont = CreateFontW(22, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+			CLEARTYPE_QUALITY, FF_DONTCARE, L"Segoe UI");
+		HFONT oldF = (HFONT)SelectObject(hdc, hFont);
+		SetTextColor(hdc, TEXT_HI);
+		RECT hRc{ kRailW + kTilePad, 30, kDialogW - 20, 70 };
+		DrawTextW(hdc, L"New", -1, &hRc, DT_LEFT | DT_SINGLELINE);
+		SelectObject(hdc, oldF);
+		DeleteObject(hFont);
+	}
+
+	// Tiles
+	for (int i = 0; i < kTileCount; ++i)
+	{
+		RECT tr = getTileRect(i);
+		bool hovered = (state.hoveredTile == i);
+
+		HBRUSH tileBrush = CreateSolidBrush(hovered ? TILE_HOV : TILE_BG);
+		HPEN tilePen = CreatePen(PS_SOLID, 1, hovered ? ACCENT : RGB(0x18, 0x2A, 0x42));
+		HBRUSH oldB = (HBRUSH)SelectObject(hdc, tileBrush);
+		HPEN oldP = (HPEN)SelectObject(hdc, tilePen);
+		RoundRect(hdc, tr.left, tr.top, tr.right, tr.bottom, 14, 14);
+		SelectObject(hdc, oldB); SelectObject(hdc, oldP);
+		DeleteObject(tileBrush); DeleteObject(tilePen);
+
+		int cx = (tr.left + tr.right) / 2;
+		int cy = tr.top + 110;
+		drawIcon(hdc, kTiles[i].iconKind, cx, cy);
+
+		// title
+		HFONT titleF = CreateFontW(18, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+			CLEARTYPE_QUALITY, FF_DONTCARE, L"Segoe UI");
+		HFONT oldF = (HFONT)SelectObject(hdc, titleF);
+		SetTextColor(hdc, TEXT_HI);
+		RECT titleRc{ tr.left + 16, tr.top + 190, tr.right - 16, tr.top + 220 };
+		DrawTextW(hdc, kTiles[i].title, -1, &titleRc, DT_CENTER | DT_SINGLELINE);
+		SelectObject(hdc, oldF);
+		DeleteObject(titleF);
+
+		// desc
+		HFONT descF = CreateFontW(13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+			CLEARTYPE_QUALITY, FF_DONTCARE, L"Segoe UI");
+		oldF = (HFONT)SelectObject(hdc, descF);
+		SetTextColor(hdc, TEXT_LO);
+		RECT descRc{ tr.left + 14, tr.top + 230, tr.right - 14, tr.bottom - 16 };
+		DrawTextW(hdc, kTiles[i].desc, -1, &descRc, DT_CENTER | DT_WORDBREAK);
+		SelectObject(hdc, oldF);
+		DeleteObject(descF);
+	}
+
+	BitBlt(hdcScreen, 0, 0, rc.right, rc.bottom, hdc, 0, 0, SRCCOPY);
+	SelectObject(hdc, oldBmp);
+	DeleteObject(bmp);
+	DeleteDC(hdc);
+	EndPaint(hDlg, &ps);
+}
+
+static INT_PTR CALLBACK startCenterProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
+{
+	DlgState* state = reinterpret_cast<DlgState*>(GetWindowLongPtr(hDlg, DWLP_USER));
+
+	switch (msg)
+	{
+		case WM_INITDIALOG:
+		{
+			state = new DlgState();
+			SetWindowLongPtr(hDlg, DWLP_USER, reinterpret_cast<LONG_PTR>(state));
+			// Resize to pixel dimensions (ignore DLU from template)
+			int sw = GetSystemMetrics(SM_CXSCREEN);
+			int sh = GetSystemMetrics(SM_CYSCREEN);
+			RECT wr{ 0, 0, kDialogW, kDialogH };
+			AdjustWindowRect(&wr, static_cast<DWORD>(GetWindowLongPtr(hDlg, GWL_STYLE)), FALSE);
+			int w = wr.right - wr.left;
+			int h = wr.bottom - wr.top;
+			SetWindowPos(hDlg, nullptr, (sw - w) / 2, (sh - h) / 2, w, h, SWP_NOZORDER);
+			return TRUE;
+		}
+		case WM_MOUSEMOVE:
+		{
+			if (!state) break;
+			int x = GET_X_LPARAM(lp);
+			int y = GET_Y_LPARAM(lp);
+			int h = hitTestTile(x, y);
+			if (h != state->hoveredTile)
+			{
+				state->hoveredTile = h;
+				InvalidateRect(hDlg, nullptr, FALSE);
+			}
+			if (!state->tracking)
+			{
+				TRACKMOUSEEVENT tme{ sizeof(tme), TME_LEAVE, hDlg, 0 };
+				TrackMouseEvent(&tme);
+				state->tracking = true;
+			}
+			return TRUE;
+		}
+		case WM_MOUSELEAVE:
+		{
+			if (state) { state->hoveredTile = -1; state->tracking = false; InvalidateRect(hDlg, nullptr, FALSE); }
+			return TRUE;
+		}
+		case WM_LBUTTONDOWN:
+		{
+			int h = hitTestTile(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
+			if (h >= 0) EndDialog(hDlg, kTiles[h].id);
+			return TRUE;
+		}
+		case WM_PAINT:
+			if (state) paintDialog(hDlg, *state);
+			return TRUE;
+		case WM_ERASEBKGND:
+			return TRUE; // handled in WM_PAINT via double buffer
+		case WM_SETCURSOR:
+		{
+			POINT p; GetCursorPos(&p); ScreenToClient(hDlg, &p);
+			SetCursor(LoadCursor(nullptr, hitTestTile(p.x, p.y) >= 0 ? IDC_HAND : IDC_ARROW));
+			return TRUE;
+		}
+		case WM_KEYDOWN:
+			if (wp == VK_ESCAPE) EndDialog(hDlg, 0);
+			return TRUE;
+		case WM_CLOSE:
+			EndDialog(hDlg, 0);
+			return TRUE;
+		case WM_NCDESTROY:
+			delete state;
+			SetWindowLongPtr(hDlg, DWLP_USER, 0);
+			return TRUE;
+	}
+	return FALSE;
+}
+
+} // namespace re2
+
+void Notepad_plus_Window::showStartCenterV2()
+{
+	INT_PTR result = DialogBoxParam(_hInst, MAKEINTRESOURCE(re2::IDD_V2_STARTCENTER),
+		_hSelf, re2::startCenterProc, 0);
+	switch (result)
+	{
+		case 1001: _notepad_plus_plus_core.fileNew(); break;
+		case 1002: createBlankHtmlV2(); break;
+		case 1003: createWebProjectV2(); break;
+		default: break;
+	}
+}
+
+void Notepad_plus_Window::createBlankHtmlV2()
+{
+	_notepad_plus_plus_core.fileNew();
+	::SendMessage(_hSelf, WM_COMMAND, IDM_LANG_HTML, 0);
+	static constexpr const char* html =
+		"<!DOCTYPE html>\r\n"
+		"<html lang=\"en\">\r\n"
+		"<head>\r\n"
+		"\t<meta charset=\"UTF-8\">\r\n"
+		"\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"
+		"\t<title>New Page</title>\r\n"
+		"</head>\r\n"
+		"<body>\r\n"
+		"\t\r\n"
+		"</body>\r\n"
+		"</html>\r\n";
+	_notepad_plus_plus_core._pEditView->execute(SCI_SETTEXT, 0, reinterpret_cast<LPARAM>(html));
+}
+
+void Notepad_plus_Window::createWebProjectV2()
+{
+	IFileDialog* pfd = nullptr;
+	if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&pfd))))
+		return;
+
+	DWORD flags = 0;
+	pfd->GetOptions(&flags);
+	pfd->SetOptions(flags | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+	pfd->SetTitle(L"Choose a folder for your new web project");
+
+	if (pfd->Show(_hSelf) != S_OK) { pfd->Release(); return; }
+
+	IShellItem* item = nullptr;
+	if (FAILED(pfd->GetResult(&item))) { pfd->Release(); return; }
+
+	PWSTR folderPath = nullptr;
+	if (FAILED(item->GetDisplayName(SIGDN_FILESYSPATH, &folderPath)))
+	{
+		item->Release(); pfd->Release(); return;
+	}
+
+	auto writeFile = [](const std::wstring& path, const std::string& content) {
+		std::ofstream out(path, std::ios::binary);
+		if (out) out.write(content.data(), content.size());
+	};
+
+	std::wstring base(folderPath);
+	writeFile(base + L"\\index.html",
+		"<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head>\r\n"
+		"\t<meta charset=\"UTF-8\">\r\n\t<title>New Project</title>\r\n"
+		"\t<link rel=\"stylesheet\" href=\"style.css\">\r\n</head>\r\n<body>\r\n"
+		"\t<h1>Hello, world.</h1>\r\n\t<script src=\"script.js\"></script>\r\n"
+		"</body>\r\n</html>\r\n");
+	writeFile(base + L"\\style.css",
+		"body {\r\n\tfont-family: 'Cascadia Code', monospace;\r\n"
+		"\tbackground: #000C18;\r\n\tcolor: #6688CC;\r\n"
+		"\tmargin: 2rem;\r\n}\r\n");
+	writeFile(base + L"\\script.js",
+		"document.addEventListener('DOMContentLoaded', () => {\r\n"
+		"\tconsole.log('V2 web project ready');\r\n});\r\n");
+
+	std::wstring indexPath = base + L"\\index.html";
+	BufferID bid = _notepad_plus_plus_core.doOpen(indexPath);
+	if (bid != BUFFER_INVALID)
+		_notepad_plus_plus_core.switchToFile(bid);
+
+	CoTaskMemFree(folderPath);
+	item->Release();
+	pfd->Release();
+}
+
 void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdLine, CmdLineParams *cmdLineParams)
 {
 	Window::init(hInst, parent);
@@ -99,7 +511,7 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 	_hSelf = ::CreateWindowEx(
 		WS_EX_ACCEPTFILES | (_notepad_plus_plus_core._nativeLangSpeaker.isRTL() ? WS_EX_LAYOUTRTL : 0),
 		_className,
-		L"Notepad++",
+		L"Notepad++ V2",
 		(WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN),
 		// CreateWindowEx bug : set all 0 to walk around the problem
 		0, 0, 0, 0,
@@ -440,6 +852,19 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 
 	if (nppParams.doPrintAndExit())
 		::SendMessage(_hSelf, NPPM_INTERNAL_PRNTANDQUIT, 0, 0);
+
+	// V2: first-run onboarding — show welcome once, gated by a marker file in the user config dir
+	{
+		std::wstring markerPath = nppParams.getUserPath();
+		pathAppend(markerPath, L"re2_onboarded.marker");
+		if (!doesFileExist(markerPath.c_str()))
+		{
+			showStartCenterV2();
+			HANDLE h = ::CreateFileW(markerPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+			if (h != INVALID_HANDLE_VALUE)
+				::CloseHandle(h);
+		}
+	}
 }
 
 

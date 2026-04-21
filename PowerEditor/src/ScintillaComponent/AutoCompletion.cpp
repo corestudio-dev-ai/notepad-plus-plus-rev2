@@ -988,11 +988,18 @@ void AutoCompletion::insertMatchedChars(int character, const MatchedPairConf & m
 
 		case '>':
 		{
-			if (matchedPairConf._doHtmlXmlTag && (_curLang == L_HTML || _curLang == L_XML))
+			// V2: extend HTML-style tag auto-close beyond L_HTML/L_XML to PHP, ASP, JSP, plain text and user/external
+			// lexers, so "<div>" auto-closes in any file with HTML content.
 			{
-				getCloseTag(closeTag, tagMaxLen, caretPos, _curLang == L_HTML);
-				if (closeTag[0] != '\0')
-					matchedChars = closeTag;
+				const bool isTagLang = _curLang == L_HTML || _curLang == L_XML
+					|| _curLang == L_PHP || _curLang == L_ASP || _curLang == L_JSP
+					|| _curLang == L_TEXT || _curLang == L_USER || _curLang == L_EXTERNAL;
+				if (matchedPairConf._doHtmlXmlTag && isTagLang)
+				{
+					getCloseTag(closeTag, tagMaxLen, caretPos, _curLang == L_HTML);
+					if (closeTag[0] != '\0')
+						matchedChars = closeTag;
+				}
 			}
 		}
 		break;
